@@ -22,7 +22,7 @@
   :init
   (set-face-attribute 'default nil
 		      :font "Maple Mono"
-		      :height 160)  
+		      :height 160)
   (set-fontset-font t 'han
 		    (font-spec :family "Noto Sans CJK SC"))
   (setq font-lock-maximum-decoration t))
@@ -61,7 +61,7 @@
       (set-face-attribute 'lsp-bridge-semantic-tokens-namespace-face nil
 			  :foreground "#d19a66"
 			  :slant 'normal))
-    
+
     ;; function
     ;; (when (facep 'lsp-bridge-semantic-tokens-function-face)
     ;;   (set-face-attribute 'lsp-bridge-semantic-tokens-function-face nil
@@ -100,4 +100,4 @@
 
 (provide 'init-ui)
 
-;;; init-ui.el ends here 
+;;; init-ui.el ends here

@@ -1,4 +1,5 @@
 *
+
 !.gitignore
 
 !init.el
@@ -6,5 +7,7 @@
 
 !lisp/
 !lisp/**/
-
 !lisp/**/*.el
+
+!lisp-site/
+!lisp-site/**

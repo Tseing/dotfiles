@@ -1,0 +1,3 @@
+[submodule ".emacs.d/lisp-site/lsp-bridge"]
+	path = .emacs.d/lisp-site/lsp-bridge
+	url = https://github.com/holman/dotfiles.git
