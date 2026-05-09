@@ -1,0 +1,106 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$username\
+$hostname \
+$container\
+$directory\
+$git_branch\
+$git_commit\
+$git_status\
+$rust\
+$python\
+$nodejs\
+$c\
+$cpp\
+$dotnet\
+$cmake\
+$docker_context\
+$package\
+$fill\
+$cmd_duration\
+$status\
+$line_break\
+$character
+"""
+
+[username]
+show_always = true
+style_user = "bold green"
+style_root = "bold red"
+format = "[$user]($style)"
+
+[c]
+symbol = " "
+
+[cpp]
+symbol = " "
+
+[cmake]
+symbol = " "
+format = "[$symbol$version]($style) "
+
+[cmd_duration]
+min_time = 500
+format = "[$duration]($style) "
+style = "yellow"
+
+[container]
+symbol = " "
+format = " $symbol$context"
+
+[dart]
+symbol = " "
+
+[direnv]
+symbol = " "
+
+[directory]
+read_only = " 󰌾"
+truncate_to_repo = true
+
+[docker_context]
+symbol = " "
+format = " $symbol$context"
+
+[dotnet]
+symbol = " "
+
+[fill]
+symbol = " "
+
+[git_branch]
+symbol = " "
+format = "[$symbol$branch]($style) "
+
+[git_commit]
+commit_hash_length = 7
+tag_symbol = '  '
+format = "[$tag$hash]($style) "
+
+[hostname]
+ssh_only = false
+style = "bold green"
+format = "[@$hostname]($style)"
+
+[nodejs]
+symbol = " "
+format = "$symbol$version "
+
+[package]
+symbol = "󰏗 "
+format = "$symbol$version "
+
+[python]
+symbol = " "
+format = "[$symbol$version( \\($virtualenv\\))]($style) "
+
+[rust]
+symbol = "󱘗 "
+format = "$symbol$version "
+
+[status]
+disabled = false
+symbol = " "
+format = "[$symbol]($style)"
+
