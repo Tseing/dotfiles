@@ -21,13 +21,13 @@
   :config
   (set-face-attribute 'mode-line nil
                       :family "FiraCode Nerd Font"
-                      :height 100)
+                      :height 120)
   (set-face-attribute 'mode-line-active nil
                       :family "FiraCode Nerd Font"
-                      :height 100)
+                      :height 120)
   (set-face-attribute 'mode-line-inactive nil
                       :family "FiraCode Nerd Font"
-                      :height 100))
+                      :height 120))
 
 (use-package dashboard
   :init
