@@ -31,8 +31,21 @@
 (use-package emacs
   :ensure nil
   :config
+  (setq-default indent-tabs-mode nil
+                tab-width 4
+                standard-indent 4)
   (setq display-line-numbers-type 'relative)
   (global-display-line-numbers-mode t))
+
+(use-package whitespace
+  :ensure nil
+  :hook (prog-mode . whitespace-mode)
+  :init
+  (setq whitespace-style '(face tabs tab-mark trailing spaces space-mark))
+  (setq whitespace-display-mappings
+        '((tab-mark 9 [187 9] [92 9])        ; [TAB] -> >>
+          (space-mark 32 [183] [46])         ; [space] -> .
+          (fullwidth-space 12288 [9633]))))
 
 (use-package emacs
   :ensure nil
@@ -91,8 +104,8 @@
     ;; struct / enum / interface: bold
     (dolist (face '(lsp-bridge-semantic-tokens-struct-face
                     ;; lsp-bridge-semantic-tokens-enum-face
-                    lsp-bridge-semantic-tokens-interface-face
-                    font-lock-type-face))
+                    ;; font-lock-type-face
+                    lsp-bridge-semantic-tokens-interface-face))
       (when (facep face)
         (set-face-attribute face nil
                             :weight 'bold)))))

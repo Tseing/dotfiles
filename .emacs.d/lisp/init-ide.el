@@ -12,14 +12,17 @@
 
 (use-package python
   :ensure nil
+  :init
+  (setq python-indent-offset 4)
   :mode ("\\.py\\'" . python-ts-mode))
 
 (use-package rust-ts-mode
   :ensure nil
+  :init
+  (setq rust-ts-mode-indent-offset 4)
   :mode ("\\.rs\\'" . rust-ts-mode))
 
 (use-package markdown-mode
-  :ensure nil
   :mode "\\.md\\'")
 
 (use-package yasnippet
@@ -28,24 +31,27 @@
 (add-to-list 'load-path
 	     (expand-file-name "site-lisp/lsp-bridge" user-emacs-directory))
 
-(require 'lsp-bridge)
+(use-package lsp-bridge
+  :ensure nil
+  :hook
+  ((python-ts-mode . lsp-bridge-mode)
+   (rust-ts-mode . lsp-bridge-mode))
+  :bind
+  (("M-n" . lsp-bridge-diagnostic-jump-next)
+   ("M-p" . lsp-bridge-diagnostic-jump-prev)
+   ("C-c l d" . lsp-bridge-diagnostic-list)
+   ("M-]" . lsp-bridge-find-def)
+   ("M-[" . lsp-bridge-find-def-return))
+  :init
+  ;;; Python LSP
+  (setq lsp-bridge-python-lsp-server "basedpyright"
+        lsp-bridge-enable-inlay-hint t))
 
-;;; Python
-(setq lsp-bridge-python-lsp-server "basedpyright")
-(setq lsp-bridge-enable-inlay-hint t)
-
-(global-lsp-bridge-mode)
-
-(with-eval-after-load 'lsp-bridge
-  (add-hook 'python-ts-mode-hook #'lsp-bridge-semantic-tokens-mode)
-  (add-hook 'rust-ts-mode-hook #'lsp-bridge-semantic-tokens-mode))
-
-(with-eval-after-load 'lsp-bridge
-  (global-set-key (kbd "M-n") #'lsp-bridge-diagnostic-jump-next)
-  (global-set-key (kbd "M-p") #'lsp-bridge-diagnostic-jump-prev)
-  (global-set-key (kbd "C-c l d") #'lsp-bridge-diagnostic-list)
-  (global-set-key (kbd "M-]") #'lsp-bridge-find-def)
-  (global-set-key (kbd "M-[") #'lsp-bridge-find-def-return))
+(with-eval-after-load 'acm
+  ;; Keep TAB for indentation; use C-<tab> to accept completion candidate.
+  (define-key acm-mode-map (kbd "<tab>") nil)
+  (define-key acm-mode-map (kbd "TAB") nil)
+  (define-key acm-mode-map (kbd "C-<tab>") #'acm-complete))
 
 (defun my/python-flycheck-setup ()
   "Use pylint & mypy."

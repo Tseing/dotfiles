@@ -26,7 +26,8 @@ Requirements:
 
 ```shell
 $ mkdir -p ~/.local/bin
-$ ln -sf ~/.emacs.d/lsp-bridge/python-lsp-bridge ~/.local/bin/python-lsp-bridge
+$ ln -sf ~/.emacs.d/site-lisp/lsp-bridge/python-lsp-bridge ~/.local/bin/python-lsp-bridge
+$ chmod +x ~/.emacs.d/site-lisp/lsp-bridge/python-lsp-bridge
 ```
 
 ### Python LSP
@@ -69,6 +70,4 @@ To update all submodules:
 
 ```shell
 $ git submodule update --remote --merge
-```
-
 ```
