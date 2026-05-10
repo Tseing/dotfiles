@@ -11,6 +11,7 @@
 (require 'init-startup)
 (require 'init-ui)
 (require 'init-elpa)
+(require 'init-theme)
 (require 'init-packages)
 (require 'init-ide)
 

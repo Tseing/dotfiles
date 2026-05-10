@@ -1,30 +1,16 @@
-;;; init-ui --- settings for ui
+;;; init-ui --- settings for ui -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;; Code:
-
-(use-package doom-themes
-  :demand t
-  :init
-  (load-theme 'doom-one t)
-  :config
-  (doom-themes-org-config))
-
-(use-package smart-mode-line
-  :init
-  (setq sml/no-confirm-load-theme t
-	sml/theme 'respectful)
-  :config
-  (sml/setup))
 
 (use-package emacs
   :ensure nil
   :init
   (set-face-attribute 'default nil
-		      :font "Maple Mono"
-		      :height 160)
+              :font "Maple Mono"
+              :height 160)
   (set-fontset-font t 'han
-		    (font-spec :family "Noto Sans CJK SC"))
+            (font-spec :family "Noto Sans CJK SC"))
   (setq font-lock-maximum-decoration t))
 
 
@@ -35,7 +21,8 @@
                 tab-width 4
                 standard-indent 4)
   (setq display-line-numbers-type 'relative)
-  (global-display-line-numbers-mode t))
+  (global-display-line-numbers-mode t)
+  (global-hl-line-mode 1))
 
 (use-package whitespace
   :ensure nil
@@ -68,12 +55,24 @@
                           :slant 'italic))
 
     (set-face-attribute 'font-lock-keyword-face nil
-			:slant 'italic)
+                        :foreground "#c678dd"
+                        :slant 'italic)
+
+    (set-face-attribute 'font-lock-variable-name-face nil
+                        :foreground "#e06c75")
+
+    (set-face-attribute 'font-lock-variable-use-face nil
+                        :foreground "#e06c75")
+
+    (set-face-attribute 'font-lock-function-call-face nil
+                        :foreground "#61afef"
+                        :weight 'regular
+                        :slant 'normal)
 
     (when (facep 'lsp-bridge-semantic-tokens-namespace-face)
       (set-face-attribute 'lsp-bridge-semantic-tokens-namespace-face nil
-			  :foreground "#d19a66"
-			  :slant 'normal))
+                          :foreground "#d19a66"
+                          :slant 'normal))
 
     ;; function
     ;; (when (facep 'lsp-bridge-semantic-tokens-function-face)
@@ -87,9 +86,17 @@
 
     ;; function.declaration: bold
     (set-face-attribute 'font-lock-function-name-face nil
-			:foreground "#31e9d9"
+                        :foreground "#31e9d9"
                         :weight 'bold)
 
+    (set-face-attribute 'font-lock-function-call-face nil
+                        :foreground "#31e9d9")
+
+    (set-face-attribute 'font-lock-builtin-face nil
+                        :foreground "#31e9d9")
+
+    (set-face-attribute 'font-lock-property-use-face nil
+                        :foreground "#56b6c2")
     ;; function token
     ;; (when (facep 'lsp-bridge-semantic-tokens-function-face)
     ;;   (set-face-attribute 'lsp-bridge-semantic-tokens-function-face nil
@@ -105,11 +112,10 @@
     (dolist (face '(lsp-bridge-semantic-tokens-struct-face
                     ;; lsp-bridge-semantic-tokens-enum-face
                     ;; font-lock-type-face
-                    lsp-bridge-semantic-tokens-interface-face))
+                    lsp-bridge-semantic-retokens-interface-face))
       (when (facep face)
         (set-face-attribute face nil
                             :weight 'bold)))))
-
 
 (provide 'init-ui)
 

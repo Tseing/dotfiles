@@ -8,7 +8,8 @@
   :config
   (setq treesit-language-source-alist
         '((python "https://github.com/tree-sitter/tree-sitter-python" "v0.23.2")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2"))))
+          (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2"))
+        treesit-font-lock-level 4))
 
 (use-package python
   :ensure nil
@@ -37,15 +38,18 @@
   ((python-ts-mode . lsp-bridge-mode)
    (rust-ts-mode . lsp-bridge-mode))
   :bind
-  (("M-n" . lsp-bridge-diagnostic-jump-next)
-   ("M-p" . lsp-bridge-diagnostic-jump-prev)
-   ("C-c l d" . lsp-bridge-diagnostic-list)
-   ("M-]" . lsp-bridge-find-def)
+  (("M-]" . lsp-bridge-find-def)
    ("M-[" . lsp-bridge-find-def-return))
   :init
-  ;;; Python LSP
-  (setq lsp-bridge-python-lsp-server "basedpyright"
-        lsp-bridge-enable-inlay-hint t))
+  (setq lsp-bridge-enable-semantic-tokens t
+        lsp-bridge-enable-inlay-hint t
+        lsp-bridge-enable-document-highlight t
+        lsp-bridge-enable-diagnostics t
+        lsp-bridge-python-lsp-server "basedpyright")
+  :config
+  (add-hook 'python-ts-mode-hook #'lsp-bridge-semantic-tokens-mode))
+
+
 
 (with-eval-after-load 'acm
   ;; Keep TAB for indentation; use C-<tab> to accept completion candidate.
@@ -64,6 +68,9 @@
   ((emacs-lisp-mode . flycheck-mode)
    (python-mode . my/python-flycheck-setup)
    (python-ts-mode . my/python-flycheck-setup))
+  :bind
+  (("M-n" . flycheck-next-error)
+   ("M-p" . flycheck-previous-error))
   :config
   (flycheck-add-next-checker 'python-pylint 'python-mypy))
 

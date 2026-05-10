@@ -2,13 +2,14 @@
 
 ;;; Commentary:
 ;;; Code:
+(use-package project
+  :ensure nil)
 
 (use-package benchmark-init
   :init
   (benchmark-init/activate)
   :hook
   (after-init . benchmark-init/deactivate))
-
 (use-package crux
   :bind
   ("C-k" . crux-smart-kill-line))
