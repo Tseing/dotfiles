@@ -132,11 +132,26 @@
 
 
 (with-eval-after-load 'acm
-  ;; Keep TAB for indentation; use C-<tab> to accept completion candidate.
-  (define-key acm-mode-map (kbd "<tab>") nil)
-  (define-key acm-mode-map (kbd "TAB") nil)
-  (define-key acm-mode-map (kbd "C-<tab>") #'acm-complete))
+  ;; TAB to accept
+  (define-key acm-mode-map (kbd "<tab>") #'acm-complete)
+  (define-key acm-mode-map (kbd "TAB") #'acm-complete)
+  (define-key acm-mode-map (kbd "<return>") #'acm-complete)
+  (define-key acm-mode-map (kbd "RET") #'acm-complete)
+  ;; ESC to unaccept
+  (define-key acm-mode-map (kbd "<escape>") #'acm-complete)
+  (define-key acm-mode-map (kbd "ESC") #'acm-hide))
 
+
+(use-package apheleia
+  :config
+  (setf (alist-get 'python-ts-mode apheleia-mode-alist)
+        '(ruff-isort ruff))
+
+  (setf (alist-get 'rust-ts-mode apheleia-mode-alist)
+        'rustfmt)
+
+  ;; formatting when saving
+  (apheleia-global-mode +1))
 
 (provide 'init-ide)
 ;;; init-ide.el ends here
