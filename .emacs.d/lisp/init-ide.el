@@ -153,5 +153,17 @@
   ;; formatting when saving
   (apheleia-global-mode +1))
 
+(use-package magit
+  :bind
+  (("C-x g" . magit-status)))
+
+(use-package diff-hl
+  :hook
+  ((prog-mode text-mode conf-mode) . diff-hl-mode)
+  (dired-mode . diff-hl-dired-mode)
+  :config
+  (diff-hl-flydiff-mode 1)
+  (diff-hl-margin-mode 1))
+
 (provide 'init-ide)
 ;;; init-ide.el ends here

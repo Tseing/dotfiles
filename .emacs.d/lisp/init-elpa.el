@@ -1,11 +1,11 @@
-;;; init-elpa --- settings for elpa
+;;; init-elpa --- settings for elpa -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;; Code:
 
-(setq package-archives '(("melpa" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")
-			 ("gnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
-			 ("org" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/org/")))
+(setq package-archives '(("melpa" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")
+                         ("gnu" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+                         ("org" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/org/")))
 
 (setq package-check-signature nil)
 
