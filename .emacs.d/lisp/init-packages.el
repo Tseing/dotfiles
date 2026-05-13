@@ -3,7 +3,33 @@
 ;;; Commentary:
 ;;; Code:
 (use-package project
-  :ensure nil)
+  :ensure nil
+  :config
+  (setq project-switch-commands
+        '((project-dired "Dired" ?d)
+          (project-find-file "Find file" ?f)
+          (project-find-regexp "Find regexp" ?g)
+          (project-eshell "Eshell" ?e)))
+
+  (defun my/project-rgrep ()
+    "Run rgrep from project root, or ask directory if not in a project."
+    (interactive)
+    (let* ((project (project-current nil))
+           (root (if project
+                     (project-root project)
+                   (read-directory-name "Base directory: ")))
+           (regexp (read-string "Search regexp: "
+                                (thing-at-point 'symbol t)))
+           (files (read-string "Path/file pattern: " "*")))
+      (rgrep regexp files root)))
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "SPC p p") #'project-switch-project)
+    (define-key evil-normal-state-map (kbd "SPC p f") #'project-find-file)
+    (define-key evil-normal-state-map (kbd "SPC p d") #'project-dired)
+    (define-key evil-normal-state-map (kbd "SPC p b") #'project-switch-to-buffer)
+    (define-key evil-normal-state-map (kbd "SPC p k") #'project-kill-buffers)
+    (define-key evil-normal-state-map (kbd "SPC p s") #'my/project-rgrep)))
 
 (use-package benchmark-init
   :init
@@ -24,6 +50,10 @@
   (("<M-up>" . drag-stuff-up)
   ("<M-down>" . drag-stuff-down)))
 
+(use-package ibuffer
+  :ensure nil
+  :bind
+  ("C-x C-b" . ibuffer))
 ;; (use-package ivy
 ;;   :demand t
 ;;   :config
