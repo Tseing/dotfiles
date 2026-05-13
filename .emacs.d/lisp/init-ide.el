@@ -121,6 +121,7 @@
   :init
   (setq lsp-bridge-enable-diagnostics t
         lsp-bridge-diagnostic-enable-overlays nil
+        lsp-bridge-diagnostic-fetch-idle t
         lsp-bridge-enable-semantic-tokens t
         lsp-bridge-enable-inlay-hint t
         lsp-bridge-enable-document-highlight t
@@ -134,6 +135,8 @@
   (add-hook 'qml-mode-hook #'lsp-bridge-semantic-tokens-mode)
 
   (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "SPC r n") #'lsp-bridge-rename)
+    (define-key evil-normal-state-map (kbd "SPC r a") #'lsp-bridge-code-action)
     (define-key evil-normal-state-map (kbd "g d") #'lsp-bridge-find-def)
     (define-key evil-normal-state-map (kbd "g i") #'lsp-bridge-find-impl)
     (define-key evil-normal-state-map (kbd "g r") #'lsp-bridge-find-references)
@@ -143,14 +146,15 @@
 
 
 (with-eval-after-load 'acm
-  ;; TAB to accept
   (define-key acm-mode-map (kbd "<tab>") #'acm-complete)
   (define-key acm-mode-map (kbd "TAB") #'acm-complete)
   (define-key acm-mode-map (kbd "<return>") #'acm-complete)
   (define-key acm-mode-map (kbd "RET") #'acm-complete)
-  ;; ESC to unaccept
-  (define-key acm-mode-map (kbd "<escape>") #'acm-hide)
-  (define-key acm-mode-map (kbd "ESC") #'acm-hide))
+
+  (define-key acm-mode-map (kbd "C-g") #'acm-hide)
+
+  (define-key acm-mode-map (kbd "C-j") #'acm-select-next)
+  (define-key acm-mode-map (kbd "C-k") #'acm-select-prev))
 
 
 (use-package apheleia
@@ -165,7 +169,10 @@
         'qmlformat)
 
   ;; formatting when saving
-  (apheleia-global-mode +1))
+  (apheleia-global-mode +1)
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "SPC f") #'apheleia-format-buffer)))
 
 (use-package magit
   :bind
