@@ -26,6 +26,9 @@
 (use-package markdown-mode
   :mode "\\.md\\'")
 
+(use-package qml-mode
+  :mode "\\.qml\\'")
+
 (use-package yasnippet
   :config
   (yas-global-mode 1))
@@ -88,7 +91,8 @@
   :hook
   ((emacs-lisp-mode . flycheck-mode)
    (python-ts-mode . my/python-flycheck-setup)
-   (rust-ts-mode . my/lsp-bridge-flycheck-setup))
+   (rust-ts-mode . my/lsp-bridge-flycheck-setup)
+   (qml-mode . my/lsp-bridge-flycheck-setup))
   :bind
   (("M-n" . flycheck-next-error)
    ("M-p" . flycheck-previous-error))
@@ -96,7 +100,7 @@
   (flycheck-define-generic-checker 'lsp-bridge
     "Flycheck frontend for lsp-bridge diagnostics."
     :start #'my/flycheck-lsp-bridge-start
-    :modes '(rust-ts-mode))
+    :modes '(rust-ts-mode qml-mode))
 
   (flycheck-define-generic-checker 'lsp-bridge-python
     "Flycheck frontend for lsp-bridge Python diagnostics."
@@ -112,10 +116,8 @@
   :ensure nil
   :hook
   ((python-ts-mode . lsp-bridge-mode)
-   (rust-ts-mode . lsp-bridge-mode))
-  :bind
-  (("M-]" . lsp-bridge-find-def)
-   ("M-[" . lsp-bridge-find-def-return))
+   (rust-ts-mode . lsp-bridge-mode)
+   (qml-mode . lsp-bridge-mode))
   :init
   (setq lsp-bridge-enable-diagnostics t
         lsp-bridge-diagnostic-enable-overlays nil
@@ -128,7 +130,16 @@
             #'my/lsp-bridge-flycheck-refresh)
 
   (add-hook 'python-ts-mode-hook #'lsp-bridge-semantic-tokens-mode)
-  (add-hook 'rust-ts-mode-hook #'lsp-bridge-semantic-tokens-mode))
+  (add-hook 'rust-ts-mode-hook #'lsp-bridge-semantic-tokens-mode)
+  (add-hook 'qml-mode-hook #'lsp-bridge-semantic-tokens-mode)
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "g d") #'lsp-bridge-find-def)
+    (define-key evil-normal-state-map (kbd "g i") #'lsp-bridge-find-impl)
+    (define-key evil-normal-state-map (kbd "g r") #'lsp-bridge-find-references)
+    (define-key evil-normal-state-map (kbd "g b") #'lsp-bridge-find-def-return)
+    (define-key evil-normal-state-map (kbd "K") #'lsp-bridge-popup-documentation)))
+
 
 
 (with-eval-after-load 'acm
@@ -149,6 +160,9 @@
 
   (setf (alist-get 'rust-ts-mode apheleia-mode-alist)
         'rustfmt)
+
+  (setf (alist-get 'qml-mode apheleia-mode-alist)
+        'qmlformat)
 
   ;; formatting when saving
   (apheleia-global-mode +1))
