@@ -13,20 +13,21 @@
 
 (use-package nerd-icons
   :custom
-  (nerd-icons-font-family "FiraCode Nerd Font"))
+  (nerd-icons-font-family "CaskaydiaMonoNerdFontPropo"))
 
 (use-package doom-modeline
   :init
+  (column-number-mode 1)
   (doom-modeline-mode 1)
   :config
   (set-face-attribute 'mode-line nil
-                      :family "FiraCode Nerd Font"
+                      :family "CaskaydiaMonoNerdFontPropo"
                       :height 120)
   (set-face-attribute 'mode-line-active nil
-                      :family "FiraCode Nerd Font"
+                      :family "CaskaydiaMonoNerdFontPropo"
                       :height 120)
   (set-face-attribute 'mode-line-inactive nil
-                      :family "FiraCode Nerd Font"
+                      :family "CaskaydiaMonoNerdFontPropo"
                       :height 120))
 
 (use-package dashboard

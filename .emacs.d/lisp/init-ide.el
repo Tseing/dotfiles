@@ -138,7 +138,7 @@
   (define-key acm-mode-map (kbd "<return>") #'acm-complete)
   (define-key acm-mode-map (kbd "RET") #'acm-complete)
   ;; ESC to unaccept
-  (define-key acm-mode-map (kbd "<escape>") #'acm-complete)
+  (define-key acm-mode-map (kbd "<escape>") #'acm-hide)
   (define-key acm-mode-map (kbd "ESC") #'acm-hide))
 
 

@@ -31,7 +31,7 @@
   (setq whitespace-style '(face tabs tab-mark trailing spaces space-mark))
   (setq whitespace-display-mappings
         '((tab-mark 9 [187 9] [92 9])        ; [TAB] -> >>
-          (space-mark 32 [183] [46])         ; [space] -> .
+        ;;  (space-mark 32 [183] [46])         ; [space] -> .
           (fullwidth-space 12288 [9633]))))
 
 (use-package emacs

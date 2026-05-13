@@ -1,16 +1,16 @@
-;;; init.el --- Settings for emacs
-
+;;; init.el --- Settings for emacs -*- lexical-binding: t -*-
 ;;; Commentary:
 ;;; Code:
 
 (add-to-list 'load-path
-	     (expand-file-name "lisp" user-emacs-directory))
+     (expand-file-name "lisp" user-emacs-directory))
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
 (require 'init-startup)
 (require 'init-ui)
 (require 'init-elpa)
+(require 'init-evil)
 (require 'init-theme)
 (require 'init-packages)
 (require 'init-ide)
