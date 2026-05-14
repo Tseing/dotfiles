@@ -23,7 +23,6 @@
   (forward-line -1))
 
 (use-package evil
-  :ensure t
   :demand t
   :init
   (setq evil-want-keybinding nil
@@ -46,10 +45,10 @@
 
   ;; Let modes like org-mode handle RET when needed.
   (with-eval-after-load 'evil-maps
-    (define-key evil-motion-state-map (kbd "RET") nil)))
+    (define-key evil-motion-state-map (kbd "RET") nil)
+    (define-key evil-insert-state-map (kbd "C-k") nil)))
 
 (use-package evil-collection
-  :ensure t
   :after evil
   :demand t
   :config
@@ -67,7 +66,6 @@
   (evil-set-initial-state 'makey-key-mode 'motion))
 
 (use-package evil-surround
-  :ensure t
   :after evil
   :config
   (global-evil-surround-mode 1))

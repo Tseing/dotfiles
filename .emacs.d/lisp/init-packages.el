@@ -3,7 +3,7 @@
 ;;; Commentary:
 ;;; Code:
 (use-package project
-  :ensure nil
+  :straight nil
   :config
   (setq project-switch-commands
         '((project-dired "Dired" ?d)
@@ -51,12 +51,12 @@
   ("<M-down>" . drag-stuff-down)))
 
 (use-package ibuffer
-  :ensure nil
+  :straight nil
   :bind
   ("C-x C-b" . ibuffer))
 
 (use-package autorevert
-  :ensure nil
+  :straight nil
   :config
   (setq auto-revert-verbose nil
         global-auto-revert-non-file-buffers t
@@ -91,7 +91,7 @@
 ;; 	swiper-include-line-number-in-search t))
 
 (use-package recentf
-  :ensure nil
+  :straight nil
   :init
   (recentf-mode 1)
   :custom

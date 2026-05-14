@@ -8,10 +8,9 @@
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
 (require 'init-startup)
-(require 'init-ui)
 (require 'init-elpa)
 (require 'init-evil)
-(require 'init-theme)
+(require 'init-ui)
 (require 'init-packages)
 (require 'init-ide)
 

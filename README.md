@@ -5,13 +5,13 @@
 Clone the repository (including submodules):
 
 ```shell
-$ git clone --recurse-submodules https://github.com/Tseing/dotfiles.git ~/dotfiles
+git clone --recurse-submodules https://github.com/Tseing/dotfiles.git ~/dotfiles
 ```
 
 Run the installation script:
 
 ```shell
-$ bash ~/dotfiles/install.sh
+bash ~/dotfiles/install.sh
 ```
 
 This will create necessary symlinks to `$HOME` directory.
@@ -25,9 +25,9 @@ Requirements:
 - [uv](https://docs.astral.sh/uv/#installation)
 
 ```shell
-$ mkdir -p ~/.local/bin
-$ ln -sf ~/.emacs.d/site-lisp/lsp-bridge/python-lsp-bridge ~/.local/bin/python-lsp-bridge
-$ chmod +x ~/.emacs.d/site-lisp/lsp-bridge/python-lsp-bridge
+mkdir -p ~/.local/bin
+ln -sf ~/.emacs.d/straight/repos/lsp-bridge/python-lsp-bridge ~/.local/bin/python-lsp-bridge
+chmod +x ~/.emacs.d/straight/repos/lsp-bridge/python-lsp-bridge
 ```
 
 ### Python LSP
@@ -36,7 +36,7 @@ Requirements:
 - [pipx](https://pipx.pypa.io/stable/how-to/install-pipx/)
 
 ```shell
-$ pipx install basedpyright
+pipx install basedpyright
 ```
 
 Then clone grammar repo and compile parser:
@@ -49,8 +49,8 @@ python
 ### Rust LSP
 
 ```shell
-$ rustup component add rust-analyzer
-$ rustup component add rust-src
+rustup component add rust-analyzer
+rustup component add rust-src
 ```
 
 ```elisp
@@ -61,13 +61,13 @@ rust
 ## Update
 
 ```shell
-$ cd ~/dotfiles
-$ git pull
-$ git submodule update --init --recursive
+cd ~/dotfiles
+git pull
+git submodule update --init --recursive
 ```
 
 To update all submodules:
 
 ```shell
-$ git submodule update --remote --merge
+git submodule update --remote --merge
 ```

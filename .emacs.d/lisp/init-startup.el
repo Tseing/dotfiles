@@ -1,4 +1,4 @@
-;;; init-startup --- setttings for startup
+;;; init-startup --- setttings for startup -*- lexical-binding: t-*-
 
 ;;; Commentary:
 ;;; Code:
@@ -9,14 +9,10 @@
 (set-keyboard-coding-system 'utf-8)
 (setq default-buffer-file-coding-system 'utf-8)
 
-(setq gc-const-threshold most-positive-fixnum)
-
-(menu-bar-mode -1)
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-
 (setq inhibit-startup-screen t)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 64 1024 1024))))
 
 (provide 'init-startup)
-
 ;;; init-startup.el ends here

@@ -22,7 +22,7 @@
     (define-key evil-normal-state-map (kbd "SPC g h") #'diff-hl-diff-goto-hunk)))
 
 (use-package treesit
-  :ensure nil
+  :straight nil
   :init
   (setq treesit-language-source-alist
         '((python "https://github.com/tree-sitter/tree-sitter-python" "v0.23.2")
@@ -30,13 +30,13 @@
         treesit-font-lock-level 4))
 
 (use-package python
-  :ensure nil
+  :straight nil
   :init
   (setq python-indent-offset 4)
   :mode ("\\.py\\'" . python-ts-mode))
 
 (use-package rust-ts-mode
-  :ensure nil
+  :straight nil
   :init
   (setq rust-ts-mode-indent-offset 4)
   :mode ("\\.rs\\'" . rust-ts-mode))
@@ -50,9 +50,6 @@
 (use-package yasnippet
   :config
   (yas-global-mode 1))
-
-(add-to-list 'load-path
-             (expand-file-name "site-lisp/lsp-bridge" user-emacs-directory))
 
 
 (defun my/lsp-bridge-diagnostic-severity->flycheck (severity)
@@ -189,7 +186,9 @@
                              '(t . python-mypy)))
 
 (use-package lsp-bridge
-  :ensure nil
+  :straight '(lsp-bridge :type git :url git@github.com:manateelazycat/lsp-bridge.git
+                         :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
+                         :build (:not compile))
   :hook
   ((python-ts-mode . lsp-bridge-mode)
    (rust-ts-mode . lsp-bridge-mode)

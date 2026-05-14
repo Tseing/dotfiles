@@ -1,39 +1,37 @@
-;;; init-elpa --- settings for elpa -*- lexical-binding: t -*-
+;;;; init-elpa --- settings for packages -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;; Code:
 
-(setq package-archives '(("melpa" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")
-                         ("gnu" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
-                         ("org" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/org/")))
+(setq straight-vc-git-default-protocol 'ssh)
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        user-emacs-directory))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
 
-(setq package-check-signature nil)
+(straight-use-package 'use-package)
 
-(require 'package)
+(require 'use-package)
 
-(unless (bound-and-true-p package--initialized)
-  (package-initialize))
+(setq straight-use-package-by-default t)
 
-(unless (package-installed-p 'use-package)
-  (condition-case err
-      (progn
-        (package-refresh-contents)
-        (package-install 'use-package))
-    (error
-     (display-warning
-      'init-elpa
-      (format "Unable to install use-package during startup: %s" err)
-      :warning))))
-
-(setq use-package-always-ensure t
+(setq use-package-always-ensure nil
       use-package-always-defer t
       use-package-enable-imenu-support t
       use-package-expand-minimally t
       use-package-verbose t)
 
-(require 'use-package nil t)
-(when (featurep 'use-package)
-  (use-package restart-emacs))
+(use-package restart-emacs)
 
 (provide 'init-elpa)
 
