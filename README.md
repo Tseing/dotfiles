@@ -5,7 +5,7 @@
 Clone the repository (including submodules):
 
 ```shell
-git clone --recurse-submodules https://github.com/Tseing/dotfiles.git ~/dotfiles
+git clone https://github.com/Tseing/dotfiles.git ~/dotfiles
 ```
 
 Run the installation script:
@@ -63,11 +63,4 @@ rust
 ```shell
 cd ~/dotfiles
 git pull
-git submodule update --init --recursive
-```
-
-To update all submodules:
-
-```shell
-git submodule update --remote --merge
 ```
