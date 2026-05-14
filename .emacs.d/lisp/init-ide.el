@@ -3,6 +3,24 @@
 ;;; Commentary:
 ;;; Code:
 
+(use-package magit
+  :bind
+  (("C-x g" . magit-status)))
+
+(use-package diff-hl
+  :hook
+  ((prog-mode text-mode conf-mode) . diff-hl-mode)
+  (dired-mode . diff-hl-dired-mode)
+  :config
+  (diff-hl-flydiff-mode 1)
+  (diff-hl-margin-mode 1)
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "]c") #'diff-hl-next-hunk)
+    (define-key evil-normal-state-map (kbd "[c") #'diff-hl-previous-hunk)
+    (define-key evil-normal-state-map (kbd "SPC g h") #'diff-hl-diff-goto-hunk)))
+
 (use-package treesit
   :ensure nil
   :init
@@ -70,22 +88,66 @@
           lsp-bridge-diagnostic-records)))
     (funcall callback 'finished errors)))
 
-
 (defun my/lsp-bridge-flycheck-refresh ()
   (when (and (bound-and-true-p flycheck-mode)
              (memq flycheck-checker '(lsp-bridge
-                                      lsp-bridge-python)))
+                                      lsp-bridge-python-mypy
+                                      lsp-bridge-python-pylint-mypy)))
     (flycheck-buffer)))
 
-
 (defun my/lsp-bridge-flycheck-setup ()
+  "Set up Flycheck for common language."
   (setq-local flycheck-checker 'lsp-bridge)
   (flycheck-mode 1))
 
-(defun my/python-flycheck-setup ()
-  (setq-local flycheck-checker 'lsp-bridge-python)
-  (flycheck-mode 1))
+;;; Python toolchain selection
+(defun my/python-set-formatter (formatters)
+  "Set Python FORMATTERS for the current buffer with Apheleia."
+  (require 'apheleia)
+  (setq-local apheleia-mode-alist
+              (cons `(python-ts-mode . ,formatters)
+                    (assq-delete-all 'python-ts-mode apheleia-mode-alist))))
 
+(defun my/python-restart-lsp-bridge ()
+  "Restart lsp-bridge in the current Python buffer."
+  (when (derived-mode-p 'python-ts-mode 'python-mode)
+    (when (bound-and-true-p lsp-bridge-mode)
+      (lsp-bridge-mode -1))
+    (lsp-bridge-mode 1)
+
+    (when (bound-and-true-p flycheck-mode)
+      (flycheck-buffer))))
+
+(defun my/python-use-new-stack ()
+  "Use basedpyright + ruff + mypy in the current Python buffer."
+  (interactive)
+  (setq-local lsp-bridge-python-multi-lsp-server "basedpyright_ruff")
+  (setq-local lsp-bridge-python-lsp-server "basedpyright")
+  (my/python-set-formatter '(ruff-isort ruff))
+  (setq-local flycheck-checker 'lsp-bridge-python-mypy)
+  (my/python-restart-lsp-bridge)
+  (message "Python stack: basedpyright + ruff + mypy"))
+
+(defun my/python-use-old-stack ()
+  "Use pyright + pylint + mypy + isort + black in the current Python buffer."
+  (interactive)
+  (setq-local lsp-bridge-python-multi-lsp-server nil)
+  (setq-local lsp-bridge-python-lsp-server "pyright")
+  (my/python-set-formatter '(isort black))
+  (setq-local flycheck-checker 'lsp-bridge-python-pylint-mypy)
+  (my/python-restart-lsp-bridge)
+  (message "Python stack: pyright + pylint + mypy + isort + black"))
+
+(add-to-list 'safe-local-eval-forms
+             '(my/python-use-old-stack))
+
+(add-to-list 'safe-local-eval-forms
+             '(my/python-use-new-stack))
+
+(defun my/python-flycheck-setup ()
+  "Set up Flycheck for Python."
+  (setq-local flycheck-checker 'lsp-bridge-python-mypy)
+  (flycheck-mode 1))
 
 (use-package flycheck
   :hook
@@ -102,15 +164,29 @@
     :start #'my/flycheck-lsp-bridge-start
     :modes '(rust-ts-mode qml-mode))
 
-  (flycheck-define-generic-checker 'lsp-bridge-python
-    "Flycheck frontend for lsp-bridge Python diagnostics."
+  (flycheck-define-generic-checker 'lsp-bridge-python-mypy
+    "Flycheck frontend for lsp-bridge Python diagnostics, followed by mypy."
+    :start #'my/flycheck-lsp-bridge-start
+    :modes '(python-ts-mode))
+
+  (flycheck-define-generic-checker 'lsp-bridge-python-pylint-mypy
+    "Flycheck frontend for lsp-bridge Python diagnostics, followed by pylint and mypy."
     :start #'my/flycheck-lsp-bridge-start
     :modes '(python-ts-mode))
 
   (add-to-list 'flycheck-checkers 'lsp-bridge)
-  (add-to-list 'flycheck-checkers 'lsp-bridge-python)
+  (add-to-list 'flycheck-checkers 'lsp-bridge-python-mypy)
+  (add-to-list 'flycheck-checkers 'lsp-bridge-python-pylint-mypy)
 
-  (flycheck-add-next-checker 'lsp-bridge-python 'python-mypy))
+  ;; lsp-bridge-python-mypy -> python-mypy
+  (flycheck-add-next-checker 'lsp-bridge-python-mypy
+                             '(t . python-mypy))
+
+  ;; lsp-bridge-python-pylint-mypy -> python-pylint -> python-mypy
+  (flycheck-add-next-checker 'lsp-bridge-python-pylint-mypy
+                             '(t . python-pylint))
+  (flycheck-add-next-checker 'python-pylint
+                             '(t . python-mypy)))
 
 (use-package lsp-bridge
   :ensure nil
@@ -125,14 +201,13 @@
         lsp-bridge-enable-semantic-tokens t
         lsp-bridge-enable-inlay-hint t
         lsp-bridge-enable-document-highlight t
-        lsp-bridge-python-multi-lsp-server "basedpyright_ruff")
+
+        ;; Default Python stack: basedpyright
+        lsp-bridge-python-multi-lsp-server "basedpyright_ruff"
+        lsp-bridge-python-lsp-server "basedpyright")
   :config
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
-
-  (add-hook 'python-ts-mode-hook #'lsp-bridge-semantic-tokens-mode)
-  (add-hook 'rust-ts-mode-hook #'lsp-bridge-semantic-tokens-mode)
-  (add-hook 'qml-mode-hook #'lsp-bridge-semantic-tokens-mode)
 
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC r n") #'lsp-bridge-rename)
@@ -142,8 +217,6 @@
     (define-key evil-normal-state-map (kbd "g r") #'lsp-bridge-find-references)
     (define-key evil-normal-state-map (kbd "g b") #'lsp-bridge-find-def-return)
     (define-key evil-normal-state-map (kbd "K") #'lsp-bridge-popup-documentation)))
-
-
 
 (with-eval-after-load 'acm
   (define-key acm-mode-map (kbd "<tab>") #'acm-complete)
@@ -168,23 +241,8 @@
   (setf (alist-get 'qml-mode apheleia-mode-alist)
         'qmlformat)
 
-  ;; formatting when saving
-  (apheleia-global-mode +1)
-
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC f") #'apheleia-format-buffer)))
-
-(use-package magit
-  :bind
-  (("C-x g" . magit-status)))
-
-(use-package diff-hl
-  :hook
-  ((prog-mode text-mode conf-mode) . diff-hl-mode)
-  (dired-mode . diff-hl-dired-mode)
-  :config
-  (diff-hl-flydiff-mode 1)
-  (diff-hl-margin-mode 1))
 
 (provide 'init-ide)
 ;;; init-ide.el ends here

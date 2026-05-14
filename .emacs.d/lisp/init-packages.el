@@ -54,6 +54,15 @@
   :ensure nil
   :bind
   ("C-x C-b" . ibuffer))
+
+(use-package autorevert
+  :ensure nil
+  :config
+  (setq auto-revert-verbose nil
+        global-auto-revert-non-file-buffers t
+        auto-revert-use-notify nil
+        auto-revert-interval 1)
+  (global-auto-revert-mode 1))
 ;; (use-package ivy
 ;;   :demand t
 ;;   :config
@@ -89,7 +98,6 @@
   (recentf-max-saved-items 200))
 
 (use-package vertico
-  :ensure t
   :init
   (vertico-mode 1)
 
@@ -99,18 +107,15 @@
         vertico-cycle t))
 
 (use-package savehist
-  :ensure nil
   :init
   (savehist-mode 1))
 
 (use-package marginalia
-  :ensure t
   :after vertico
   :init
   (marginalia-mode 1))
 
 (use-package orderless
-  :ensure t
   :init
   (setq completion-styles '(orderless basic)
         completion-category-defaults nil
@@ -118,19 +123,9 @@
         '((file (styles partial-completion)))))
 
 (use-package consult
-  :ensure t
   :bind
-  (("M-x" . execute-extended-command)
-   ("C-x C-f" . find-file)
-   ("C-c f" . consult-recent-file)
-   ("C-c g" . consult-git-grep)
-   ("C-s" . consult-line)
-   ("C-r" . consult-line)
-   ("C-x b" . consult-buffer)
-   ("M-g g" . consult-goto-line)
-   ("M-g i" . consult-imenu)
-   ("C-c s r" . consult-ripgrep)
-   ("C-c s f" . consult-find))
+  (("C-x b" . consult-buffer)
+   ("M-g i" . consult-imenu))
 
   :config
   (setq enable-recursive-minibuffers t)
