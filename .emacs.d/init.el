@@ -13,6 +13,7 @@
 (require 'init-ui)
 (require 'init-packages)
 (require 'init-ide)
+(require 'init-agent)
 
 (when (file-exists-p custom-file)
   (load-file custom-file))

@@ -3,7 +3,7 @@
 ;;; Commentary:
 ;;; Code:
 
-(setq straight-vc-git-default-protocol 'ssh)
+; (setq straight-vc-git-default-protocol 'ssh)
 (defvar bootstrap-version)
 (let ((bootstrap-file
        (expand-file-name

@@ -129,11 +129,11 @@
   "Use pyright + pylint + mypy + isort + black in the current Python buffer."
   (interactive)
   (setq-local lsp-bridge-python-multi-lsp-server nil)
-  (setq-local lsp-bridge-python-lsp-server "pyright")
+  (setq-local lsp-bridge-python-lsp-server "basedpyright")
   (my/python-set-formatter '(isort black))
   (setq-local flycheck-checker 'lsp-bridge-python-pylint-mypy)
   (my/python-restart-lsp-bridge)
-  (message "Python stack: pyright + pylint + mypy + isort + black"))
+  (message "Python stack: basedpyright + pylint + mypy + isort + black"))
 
 (add-to-list 'safe-local-eval-forms
              '(my/python-use-old-stack))

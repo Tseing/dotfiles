@@ -116,6 +116,10 @@
       (when (facep face)
         (set-face-attribute face nil
                             :weight 'bold)))))
+(use-package diff-mode
+  :straight nil
+  :config
+  (setq diff-refine nil))
 
 (use-package doom-themes
   :demand t
