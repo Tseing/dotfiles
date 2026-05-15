@@ -26,7 +26,9 @@
   :init
   (setq treesit-language-source-alist
         '((python "https://github.com/tree-sitter/tree-sitter-python" "v0.23.2")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2"))
+          (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src"))
         treesit-font-lock-level 4))
 
 (use-package python
@@ -40,6 +42,12 @@
   :init
   (setq rust-ts-mode-indent-offset 4)
   :mode ("\\.rs\\'" . rust-ts-mode))
+
+(use-package typescript-ts-mode
+  :straight nil
+  :mode
+  (("\\.ts\\'" . typescript-ts-mode)
+   ("\\.tsx\\'" . tsx-ts-mode)))
 
 (use-package markdown-mode
   :mode "\\.md\\'")
@@ -151,6 +159,8 @@
   ((emacs-lisp-mode . flycheck-mode)
    (python-ts-mode . my/python-flycheck-setup)
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
+   (typescripts-ts-mode . my/lsp-bridge-flycheck-setup)
+   (tsx-ts-ts-mode . my/lsp-bridge-flycheck-setup)
    (qml-mode . my/lsp-bridge-flycheck-setup))
   :bind
   (("M-n" . flycheck-next-error)
@@ -159,7 +169,10 @@
   (flycheck-define-generic-checker 'lsp-bridge
     "Flycheck frontend for lsp-bridge diagnostics."
     :start #'my/flycheck-lsp-bridge-start
-    :modes '(rust-ts-mode qml-mode))
+    :modes '(rust-ts-mode
+             typescript-ts-mode
+             tsx-ts-mode
+             qml-mode))
 
   (flycheck-define-generic-checker 'lsp-bridge-python-mypy
     "Flycheck frontend for lsp-bridge Python diagnostics, followed by mypy."
@@ -192,6 +205,8 @@
   :hook
   ((python-ts-mode . lsp-bridge-mode)
    (rust-ts-mode . lsp-bridge-mode)
+   (typescript-ts-mode . lsp-bridge-mode)
+   (tsx-ts-mode . lsp-bridge-mode)
    (qml-mode . lsp-bridge-mode))
   :init
   (setq lsp-bridge-enable-diagnostics t
@@ -236,6 +251,12 @@
 
   (setf (alist-get 'rust-ts-mode apheleia-mode-alist)
         'rustfmt)
+
+  (setf (alist-get 'typescript-ts-mode apheleia-mode-alist)
+        'prettier)
+
+  (setf (alist-get 'tsx-ts-mode apheleia-mode-alist)
+        'prettier)
 
   (setf (alist-get 'qml-mode apheleia-mode-alist)
         'qmlformat)
