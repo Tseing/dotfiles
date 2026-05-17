@@ -49,6 +49,9 @@
   (("\\.ts\\'" . typescript-ts-mode)
    ("\\.tsx\\'" . tsx-ts-mode)))
 
+(use-package vue-mode
+  :mode "\\.vue\\'")
+
 (use-package markdown-mode
   :mode "\\.md\\'")
 
@@ -160,7 +163,8 @@
    (python-ts-mode . my/python-flycheck-setup)
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
    (typescripts-ts-mode . my/lsp-bridge-flycheck-setup)
-   (tsx-ts-ts-mode . my/lsp-bridge-flycheck-setup)
+   (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
+   (vue-mode . my/lsp-bridge-flycheck-setup)
    (qml-mode . my/lsp-bridge-flycheck-setup))
   :bind
   (("M-n" . flycheck-next-error)
@@ -172,6 +176,7 @@
     :modes '(rust-ts-mode
              typescript-ts-mode
              tsx-ts-mode
+             vue-mode
              qml-mode))
 
   (flycheck-define-generic-checker 'lsp-bridge-python-mypy
@@ -207,6 +212,7 @@
    (rust-ts-mode . lsp-bridge-mode)
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
+   (vue-mode . lsp-bridge-mode)
    (qml-mode . lsp-bridge-mode))
   :init
   (setq lsp-bridge-enable-diagnostics t
@@ -256,6 +262,9 @@
         'prettier)
 
   (setf (alist-get 'tsx-ts-mode apheleia-mode-alist)
+        'prettier)
+
+  (setf (alist-get 'vue-mode apheleia-mode-alist)
         'prettier)
 
   (setf (alist-get 'qml-mode apheleia-mode-alist)

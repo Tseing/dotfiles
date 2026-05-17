@@ -1,4 +1,4 @@
-;;;; init-elpa --- settings for packages -*- lexical-binding: t -*-
+;;;; init-straight --- settings for packages -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;; Code:
@@ -33,6 +33,6 @@
 
 (use-package restart-emacs)
 
-(provide 'init-elpa)
+(provide 'init-straight)
 
-;;; init-elpa.el ends here
+;;; init-straight.el ends here
