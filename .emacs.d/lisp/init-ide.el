@@ -28,7 +28,8 @@
         '((python "https://github.com/tree-sitter/tree-sitter-python" "v0.23.2")
           (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
-          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src"))
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
+          (qmljs "https://github.com/yuja/tree-sitter-qmljs"))
         treesit-font-lock-level 4))
 
 (use-package python
@@ -55,7 +56,8 @@
 (use-package markdown-mode
   :mode "\\.md\\'")
 
-(use-package qml-mode
+(use-package qml-ts-mode
+  :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
   :mode "\\.qml\\'")
 
 (use-package yasnippet
@@ -165,7 +167,7 @@
    (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
    (vue-mode . my/lsp-bridge-flycheck-setup)
-   (qml-mode . my/lsp-bridge-flycheck-setup))
+   (qml-ts-mode . my/lsp-bridge-flycheck-setup))
   :bind
   (("M-n" . flycheck-next-error)
    ("M-p" . flycheck-previous-error))
@@ -177,7 +179,7 @@
              typescript-ts-mode
              tsx-ts-mode
              vue-mode
-             qml-mode))
+             qml-ts-mode))
 
   (flycheck-define-generic-checker 'lsp-bridge-python-mypy
     "Flycheck frontend for lsp-bridge Python diagnostics, followed by mypy."
@@ -224,7 +226,7 @@
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
    (vue-mode . lsp-bridge-mode)
-   (qml-mode . lsp-bridge-mode))
+   (qml-ts-mode . lsp-bridge-mode))
   :init
   (setq lsp-bridge-enable-diagnostics t
         lsp-bridge-diagnostic-enable-overlays nil
@@ -287,7 +289,7 @@
   (setf (alist-get 'vue-mode apheleia-mode-alist)
         'prettier)
 
-  (setf (alist-get 'qml-mode apheleia-mode-alist)
+  (setf (alist-get 'qml-ts-mode apheleia-mode-alist)
         'qmlformat)
 
   (with-eval-after-load 'evil
