@@ -162,7 +162,7 @@
   ((emacs-lisp-mode . flycheck-mode)
    (python-ts-mode . my/python-flycheck-setup)
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
-   (typescripts-ts-mode . my/lsp-bridge-flycheck-setup)
+   (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
    (vue-mode . my/lsp-bridge-flycheck-setup)
    (qml-mode . my/lsp-bridge-flycheck-setup))
@@ -203,6 +203,17 @@
   (flycheck-add-next-checker 'python-pylint
                              '(t . python-mypy)))
 
+(require 'cl-lib)
+(defun my/lsp-bridge-set-multiserver-for-extension (extension server)
+  "Set lsp-bridge multiserver SERVER for single EXTENSION."
+  (setq lsp-bridge-multi-lang-server-extension-list
+        (cl-remove-if
+         (lambda (entry)
+           (member extension (car entry)))
+         lsp-bridge-multi-lang-server-extension-list))
+  (add-to-list 'lsp-bridge-multi-lang-server-extension-list
+               (cons (list extension) server)))
+
 (use-package lsp-bridge
   :straight '(lsp-bridge :type git :url git@github.com:manateelazycat/lsp-bridge.git
                          :files (:defaults "*.el" "*.py" "acm" "core" "langserver" "multiserver" "resources")
@@ -222,12 +233,21 @@
         lsp-bridge-enable-inlay-hint t
         lsp-bridge-enable-document-highlight t
 
+        lsp-bridge-user-langserver-dir
+        (expand-file-name "langserver/" user-emacs-directory)
+        lsp-bridge-user-multiserver-dir
+        (expand-file-name "multiserver/" user-emacs-directory)
         ;; Default Python stack: basedpyright
         lsp-bridge-python-multi-lsp-server "basedpyright_ruff"
         lsp-bridge-python-lsp-server "basedpyright")
   :config
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
+
+  (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
+  (my/lsp-bridge-set-multiserver-for-extension
+    "tsx"
+    "typescriptreact_eslint_tailwindcss")
 
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC r n") #'lsp-bridge-rename)
