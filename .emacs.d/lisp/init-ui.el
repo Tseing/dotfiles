@@ -103,6 +103,10 @@
     ;;                       :foreground "#31e9d9"
     ;;                       :weight 'bold))
 
+    ;; comment
+    (set-face-attribute 'font-lock-comment-face nil
+                        :slant 'italic)
+
     ;; class.declaration: bold
     (when (facep 'lsp-bridge-semantic-tokens-class-face)
       (set-face-attribute 'lsp-bridge-semantic-tokens-class-face nil
@@ -146,6 +150,18 @@
   (set-face-attribute 'mode-line-inactive nil
                       :family "CaskaydiaMonoNerdFontPropo"
                       :height 120))
+
+(use-package breadcrumb
+  :defer 1
+  :custom
+  (breadcrumb-imenu-max-length 1000)
+  :init
+  (defun my-breadcrumb-imenu-only ()
+    "Show only imenu breadcrumbs in header line."
+    (setq-local header-line-format
+                '((:eval (breadcrumb-imenu-crumbs)))))
+  :hook
+  ((prog-mode . my-breadcrumb-imenu-only)))
 
 (use-package dashboard
   :init
@@ -224,6 +240,16 @@
           ("file"      . ,(my/acm-icon "nf-oct-file" 'font-lock-constant-face))
           ("folder"    . ,(my/acm-icon "nf-oct-file_directory" 'font-lock-constant-face))
           (t           . ,(my/acm-icon "nf-cod-symbol_misc" 'font-lock-constant-face)))))
+
+(use-package colorful-mode
+  :defer 2
+  :custom
+  (colorful-use-prefix t)
+  (colorful-prefix-string "■")
+  (colorful-only-strings 'only-prog)
+  (css-fontify-colors nil)
+  :config
+  (global-colorful-mode 1))
 
 (provide 'init-ui)
 

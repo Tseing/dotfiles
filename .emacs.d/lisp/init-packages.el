@@ -11,25 +11,46 @@
           (project-find-regexp "Find regexp" ?g)
           (project-eshell "Eshell" ?e)))
 
-  (defun my/project-rgrep ()
-    "Run rgrep from project root, or ask directory if not in a project."
-    (interactive)
-    (let* ((project (project-current nil))
-           (root (if project
-                     (project-root project)
-                   (read-directory-name "Base directory: ")))
-           (regexp (read-string "Search regexp: "
-                                (thing-at-point 'symbol t)))
-           (files (read-string "Path/file pattern: " "*")))
-      (rgrep regexp files root)))
-
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC p p") #'project-switch-project)
     (define-key evil-normal-state-map (kbd "SPC p f") #'project-find-file)
     (define-key evil-normal-state-map (kbd "SPC p d") #'project-dired)
     (define-key evil-normal-state-map (kbd "SPC p b") #'project-switch-to-buffer)
-    (define-key evil-normal-state-map (kbd "SPC p k") #'project-kill-buffers)
-    (define-key evil-normal-state-map (kbd "SPC p s") #'my/project-rgrep)))
+    (define-key evil-normal-state-map (kbd "SPC p k") #'project-kill-buffers)))
+
+(use-package magit
+  :bind
+  (("C-x g" . magit-status))
+  :config
+  (magit-auto-revert-mode 1))
+
+(use-package magit-todos
+  :after magit
+  :config
+  (magit-todos-mode 1))
+
+(use-package hl-todo
+  :hook (prog-mode . hl-todo-mode)
+  :config
+  (setq hl-todo-keyword-faces
+        '(("TODO"  . (:foreground "#FFFFFF" :background "#FFB000" :weight bold))
+          ("FIXME" . (:foreground "#FFFFFF" :background "#FF5C8A" :weight bold))
+          ("DEBUG" . (:foreground "#FFFFFF" :background "#7C5CFF" :weight bold)))))
+
+(use-package diff-hl
+  :hook
+  ((prog-mode text-mode conf-mode) . diff-hl-mode)
+  (dired-mode . diff-hl-dired-mode)
+  :config
+  (diff-hl-flydiff-mode 1)
+  (diff-hl-margin-mode 1)
+  (add-hook 'magit-pre-refresh-hook #'diff-hl-magit-pre-refresh)
+  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "]c") #'diff-hl-next-hunk)
+    (define-key evil-normal-state-map (kbd "[c") #'diff-hl-previous-hunk)
+    (define-key evil-normal-state-map (kbd "SPC g h") #'diff-hl-diff-goto-hunk)))
 
 (use-package benchmark-init
   :init
@@ -60,7 +81,6 @@
   :config
   (setq auto-revert-verbose nil
         global-auto-revert-non-file-buffers t
-        auto-revert-use-notify nil
         auto-revert-interval 1)
   (global-auto-revert-mode 1))
 ;; (use-package ivy
@@ -129,8 +149,10 @@
 
   :config
   (setq enable-recursive-minibuffers t)
-  (setq consult-line-numbers-widen t))
+  (setq consult-line-numbers-widen t)
 
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "SPC p s") #'consult-ripgrep)))
 
 (use-package company
   :hook

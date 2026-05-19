@@ -3,24 +3,6 @@
 ;;; Commentary:
 ;;; Code:
 
-(use-package magit
-  :bind
-  (("C-x g" . magit-status)))
-
-(use-package diff-hl
-  :hook
-  ((prog-mode text-mode conf-mode) . diff-hl-mode)
-  (dired-mode . diff-hl-dired-mode)
-  :config
-  (diff-hl-flydiff-mode 1)
-  (diff-hl-margin-mode 1)
-  (add-hook 'magit-post-refresh-hook #'diff-hl-magit-post-refresh)
-
-  (with-eval-after-load 'evil
-    (define-key evil-normal-state-map (kbd "]c") #'diff-hl-next-hunk)
-    (define-key evil-normal-state-map (kbd "[c") #'diff-hl-previous-hunk)
-    (define-key evil-normal-state-map (kbd "SPC g h") #'diff-hl-diff-goto-hunk)))
-
 (use-package treesit
   :straight nil
   :init
