@@ -180,6 +180,22 @@
         company-begin-commands '(self-insert-command))
   (push '(company-semantic :with company-yasnippet) company-backends))
 
+(use-package jinx
+  :defer 2
+  :bind
+  (("M-$" . jinx-correct)
+   ("C-M-$" . jinx-languages))
+  :config
+  (global-jinx-mode 1)
+  ;; exclude Chinese
+  (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
+
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "]s") #'jinx-next)
+    (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
+    (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
+  ))
+
 (use-package which-key
   :demand t
   :config (which-key-mode))

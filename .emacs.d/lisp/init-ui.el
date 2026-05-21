@@ -232,13 +232,16 @@
           ("text"      . ,(my/acm-icon "nf-cod-symbol_parameter" 'font-lock-constant-face))
           ("variable"  . ,(my/acm-icon "nf-md-variable" 'font-lock-constant-face))
           ("class"     . ,(my/acm-icon "nf-md-alphabetical_variant" 'font-lock-constant-face))
+          ("struct"    . ,(my/acm-icon "nf-md-alphabetical_variant" 'font-lock-constant-face))
           ("interface" . ,(my/acm-icon "nf-cod-symbol_interface" 'font-lock-constant-face))
           ("field"     . ,(my/acm-icon "nf-cod-symbol_field" 'font-lock-constant-face))
           ("property"  . ,(my/acm-icon "nf-cod-symbol_property" 'font-lock-constant-face))
           ("enum"      . ,(my/acm-icon "nf-cod-symbol_enum" 'font-lock-constant-face))
+          ("enumember" . ,(my/acm-icon "nf-cod-symbol_enum" 'font-lock-constant-face))
           ("constant"  . ,(my/acm-icon "nf-cod-symbol_constant" 'font-lock-constant-face))
           ("file"      . ,(my/acm-icon "nf-oct-file" 'font-lock-constant-face))
           ("folder"    . ,(my/acm-icon "nf-oct-file_directory" 'font-lock-constant-face))
+          ("search"    . ,(my/acm-icon "nf-cod-whole_word" 'font-lock-constant-face))
           (t           . ,(my/acm-icon "nf-cod-symbol_misc" 'font-lock-constant-face)))))
 
 (use-package colorful-mode
