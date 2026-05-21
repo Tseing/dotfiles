@@ -230,8 +230,8 @@
 
   (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
   (my/lsp-bridge-set-multiserver-for-extension
-    "tsx"
-    "typescriptreact_eslint_tailwindcss")
+   "tsx"
+   "typescriptreact_eslint_tailwindcss")
 
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC r n") #'lsp-bridge-rename)
@@ -240,7 +240,9 @@
     (define-key evil-normal-state-map (kbd "g i") #'lsp-bridge-find-impl)
     (define-key evil-normal-state-map (kbd "g r") #'lsp-bridge-find-references)
     (define-key evil-normal-state-map (kbd "g b") #'lsp-bridge-find-def-return)
-    (define-key evil-normal-state-map (kbd "K") #'lsp-bridge-popup-documentation)))
+    (define-key evil-normal-state-map (kbd "K") #'lsp-bridge-popup-documentation)
+    (define-key evil-normal-state-map (kbd "M-j") #'lsp-bridge-popup-documentation-scroll-up)
+    (define-key evil-normal-state-map (kbd "M-k") #'lsp-bridge-popup-documentation-scroll-down)))
 
 (with-eval-after-load 'acm
   (define-key acm-mode-map (kbd "<tab>") #'acm-complete)
@@ -251,10 +253,12 @@
   (define-key acm-mode-map (kbd "C-g") #'acm-hide)
 
   (define-key acm-mode-map (kbd "C-j") #'acm-select-next)
-  (define-key acm-mode-map (kbd "C-k") #'acm-select-prev))
-
+  (define-key acm-mode-map (kbd "C-k") #'acm-select-prev)
+  (define-key acm-mode-map (kbd "M-j") #'acm-doc-scroll-up)
+  (define-key acm-mode-map (kbd "M-k") #'acm-doc-scroll-down))
 
 (use-package apheleia
+  :defer 2
   :config
   (setf (alist-get 'python-ts-mode apheleia-mode-alist)
         '(ruff-isort ruff))

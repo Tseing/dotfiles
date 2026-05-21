@@ -14,5 +14,8 @@
           (lambda ()
             (setq gc-cons-threshold (* 64 1024 1024))))
 
+(setq undo-limit (* 80 1024 1024)
+      undo-strong-limit (* 120 1024 1024)
+      undo-outer-limit (* 360 1024 1024))
 (provide 'init-startup)
 ;;; init-startup.el ends here

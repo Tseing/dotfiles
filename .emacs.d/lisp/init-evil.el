@@ -67,6 +67,7 @@
 
 (use-package evil-surround
   :after evil
+  :defer 1
   :config
   (global-evil-surround-mode 1))
 

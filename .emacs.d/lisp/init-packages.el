@@ -181,7 +181,7 @@
   (push '(company-semantic :with company-yasnippet) company-backends))
 
 (use-package which-key
-  :defer nil
+  :demand t
   :config (which-key-mode))
 
 (use-package restart-emacs)
