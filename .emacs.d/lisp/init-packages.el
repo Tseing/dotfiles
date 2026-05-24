@@ -183,11 +183,15 @@
 
 (use-package jinx
   :defer 2
-  :bind
-  (("M-$" . jinx-correct)
-   ("C-M-$" . jinx-languages))
+  :hook (emacs-startup . global-jinx-mode)
   :config
-  (global-jinx-mode 1)
+  (setf (alist-get 'prog-mode jinx-include-faces)
+        '(font-lock-comment-face
+          font-lock-doc-face
+          font-lock-string-face
+          font-lock-function-name-face
+          font-lock-variable-name-face
+          font-lock-type-face))
   ;; exclude Chinese
   (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
 
