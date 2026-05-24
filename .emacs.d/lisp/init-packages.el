@@ -143,6 +143,7 @@
         '((file (styles partial-completion)))))
 
 (use-package consult
+  :defer 2
   :bind
   (("C-x b" . consult-buffer)
    ("M-g i" . consult-imenu))
@@ -195,6 +196,9 @@
     (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
     (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
   ))
+
+(use-package envrc
+  :hook (after-init . envrc-global-mode))
 
 (use-package which-key
   :demand t

@@ -30,10 +30,16 @@
         evil-want-integration t
         ;; C-i is usually the same key event as TAB.
         evil-want-C-i-jump nil
-        evil-undo-system 'undo-redo)
+        evil-undo-system 'undo-redo
+        evil-search-module 'evil-search
+        evil-ex-search-persistent-highlight t)
 
   :config
   (evil-mode 1)
+
+  ;; search highligh
+  ;; (define-key evil-normal-state-map (kbd "<escape>") nil)
+  (define-key evil-normal-state-map (kbd "<escape>") 'evil-ex-nohighlight)
 
   ;; Comment / uncomment.
   (define-key evil-normal-state-map (kbd ",/") #'my/comment-or-uncomment)

@@ -58,6 +58,16 @@ M-x treesit-install-language-grammar
 rust
 ```
 
+### Package Dependencies
+
+```shell
+# enchant
+sudo dnf install enchant2-devel pkgconf-pkg-config hunspell hunspell-en-US
+
+# ripgrep
+sudo dnf install ripgrep
+```
+
 ## Update
 
 ```shell

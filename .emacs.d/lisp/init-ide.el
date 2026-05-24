@@ -11,6 +11,7 @@
           (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
+          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")
           (qmljs "https://github.com/yuja/tree-sitter-qmljs"))
         treesit-font-lock-level 4))
 
@@ -37,6 +38,10 @@
 
 (use-package markdown-mode
   :mode "\\.md\\'")
+
+(use-package yaml-ts-mode
+  :straight nil
+  :mode ("\\.ya?ml\\'" . yaml-ts-mode))
 
 (use-package qml-ts-mode
   :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
