@@ -10,7 +10,9 @@
                  :includes (eaf-pdf-viewer))
   :init
   (setq eaf-python-command
-        (expand-file-name "~/.emacs.d/straight/repos/emacs-application-framework/.venv/bin/python3"))
+        (expand-file-name
+         "straight/repos/emacs-application-framework/.venv/bin/python"
+         straight-base-dir))
   :config
   (setq eaf-enable-debug t))
 
@@ -41,16 +43,6 @@
       (kbd "C-M-j") #'org-shiftdown
       (kbd "C-M-k") #'org-shiftup
       (kbd "C-M-l") #'org-shiftright)))
-
-(use-package org-pdftools
-  :hook (org-load . org-pdftools-setup-link))
-
-(use-package org-noter
-  :after (:any org pdf-view)
-  :custom (org-noter-always-create-frame nil))
-
-(use-package org-noter-pdftools
-  :after org-noter)
 
 (provide 'init-org)
 ;;; init-org.el ends here
