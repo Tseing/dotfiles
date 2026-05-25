@@ -23,3 +23,6 @@ config
 el
 pdf
 subtree
+pylint
+utf
+ascii
