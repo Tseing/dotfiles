@@ -19,6 +19,8 @@
   :straight nil
   :init
   (setq python-indent-offset 4)
+  (add-to-list 'major-mode-remap-alist
+               '(python-mode . python-ts-mode))
   :mode ("\\.py\\'" . python-ts-mode))
 
 (use-package rust-ts-mode

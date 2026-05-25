@@ -26,3 +26,5 @@ subtree
 pylint
 utf
 ascii
+usr
+env

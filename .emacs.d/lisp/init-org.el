@@ -17,7 +17,7 @@
   (setq eaf-enable-debug t))
 
 (use-package eaf-pdf-viewer
-  :defer 2
+  :defer 0
   :after eaf
   :straight nil)
 
