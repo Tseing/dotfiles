@@ -265,7 +265,10 @@
   (define-key acm-mode-map (kbd "M-k") #'acm-doc-scroll-down))
 
 (use-package apheleia
-  :defer 2
+  :commands apheleia-format-buffer
+  :init
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "SPC f") #'apheleia-format-buffer))
   :config
   (setf (alist-get 'python-ts-mode apheleia-mode-alist)
         '(ruff-isort ruff))
@@ -282,11 +285,10 @@
   (setf (alist-get 'vue-mode apheleia-mode-alist)
         'prettier)
 
+  (setf (alist-get 'qmlformat apheleia-formatters)
+        '("qmlformat" filepath))
   (setf (alist-get 'qml-ts-mode apheleia-mode-alist)
-        'qmlformat)
-
-  (with-eval-after-load 'evil
-    (define-key evil-normal-state-map (kbd "SPC f") #'apheleia-format-buffer)))
+        'qmlformat))
 
 (provide 'init-ide)
 ;;; init-ide.el ends here
