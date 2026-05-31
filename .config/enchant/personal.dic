@@ -52,3 +52,5 @@ kmph
 eq
 loc
 tol
+proc
+goto

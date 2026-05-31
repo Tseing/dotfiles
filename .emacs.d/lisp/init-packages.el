@@ -64,12 +64,12 @@
 (use-package hungry-delete
   :bind
   (("C-c DEL" . hungry-delete-backward)
-  ("C-c d" . hungry-delete-forward)))
+   ("C-c d" . hungry-delete-forward)))
 
 (use-package drag-stuff
   :bind
   (("<M-up>" . drag-stuff-up)
-  ("<M-down>" . drag-stuff-down)))
+   ("<M-down>" . drag-stuff-down)))
 
 (use-package ibuffer
   :straight nil
@@ -199,7 +199,10 @@
     (define-key evil-normal-state-map (kbd "]s") #'jinx-next)
     (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
     (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
-  ))
+    ))
+
+(use-package paredit
+  :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode))
 
 (use-package envrc
   :hook (after-init . envrc-global-mode))

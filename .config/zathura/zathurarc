@@ -1,6 +1,10 @@
 set window-title-basename "true"
 set selection-clipboard "clipboard"
 
+set font "CaskaydiaMonoNerdFontPropo 16"
+set statusbar-h-padding 8
+set statusbar-v-padding 6
+
 # Dracula color theme for Zathura
 # Swaps Foreground for Background to get a light version if the user prefers
 
