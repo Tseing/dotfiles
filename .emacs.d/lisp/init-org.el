@@ -2,30 +2,13 @@
 
 ;;; Commentary:
 ;;; Code:
-
-(use-package zathura
-  :straight nil
-  :demand t
-  :load-path "~/Projects/zathura.el"
-  :config
-  (setq zathura-outline-numbered nil)
-  (zathura-mode 1)
-
-  (with-eval-after-load 'evil
-    (evil-define-key 'normal zathura-outline-mode-map
-      (kbd "<return>") #'zathura-outline-view
-      (kbd "s-<return>") #'zathura-outline-jump))
-
-    (evil-define-key 'normal org-mode-map
-      (kbd "s-<return>") #'zathura-jump-link-at-point))
-
 (use-package org
   :straight nil
   :config
   (setq org-return-follows-link t)
 
   (with-eval-after-load 'evil
-    (evil-define-key '(normal) org-mode-map
+    (evil-define-key 'normal org-mode-map
       (kbd "SPC l i") #'org-insert-link
       (kbd "SPC l o") #'org-open-at-point))
 
@@ -51,7 +34,39 @@
       (kbd "C-M-h") #'org-shiftleft
       (kbd "C-M-j") #'org-shiftdown
       (kbd "C-M-k") #'org-shiftup
-      (kbd "C-M-l") #'org-shiftright)))
+      (kbd "C-M-l") #'org-shiftright
+
+      ;; Toggle link / image
+      (kbd "SPC t l") #'org-toggle-link-display
+      (kbd "SPC t i") #'org-toggle-inline-images)))
+
+(use-package org-download
+  :after org
+  :hook (org-mode . org-download-enable)
+  :custom
+  (org-download-image-dir "~/Documents/org/files/images")
+  (org-download-timestamp "%Y%m%d-%H%M%S_")
+  (org-download-heading-lvl nil)
+  :config
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal org-mode-map
+      (kbd "P") #'org-download-clipboard)))
+
+(use-package zathura
+  :straight nil
+  :defer 0
+  :load-path "~/Projects/zathura.el"
+  :config
+  (setq zathura-outline-numbered nil)
+  (zathura-mode 1)
+
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal zathura-outline-mode-map
+      (kbd "<return>") #'zathura-outline-view
+      (kbd "s-<return>") #'zathura-outline-jump))
+
+  (evil-define-key 'normal org-mode-map
+    (kbd "s-<return>") #'zathura-jump-link-at-point))
 
 (provide 'init-org)
 ;;; init-org.el ends here
