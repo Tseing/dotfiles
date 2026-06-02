@@ -202,7 +202,26 @@
     ))
 
 (use-package paredit
-  :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode))
+  :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
+  :config
+  (defun my/lisp-like-mode-p ()
+    (derived-mode-p 'emacs-lisp-mode
+                    'lisp-mode
+                    'lisp-interaction-mode
+                    'scheme-mode
+                    'clojure-mode
+                    'ielm-mode))
+
+  (setq paredit-space-for-delimiter-predicates
+        (list #'my/lisp-like-mode-p))
+
+  (defun my/paredit-keys-for-non-lisp ()
+    (unless (my/lisp-like-mode-p)
+      (define-key paredit-mode-map (kbd "RET") nil)
+      (define-key paredit-mode-map (kbd "DEL") nil)
+      (define-key paredit-mode-map (kbd "C-j") nil)))
+
+  (add-hook 'paredit-mode-hook #'my/paredit-keys-for-non-lisp))
 
 (use-package envrc
   :hook (after-init . envrc-global-mode))

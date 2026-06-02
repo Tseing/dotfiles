@@ -7,11 +7,30 @@
   :straight nil
   :init
   (set-face-attribute 'default nil
-              :font "Maple Mono"
-              :height 160)
+                      :font "Maple Mono"
+                      :height 160)
   (set-fontset-font t 'han
-            (font-spec :family "Noto Sans CJK SC"))
-  (setq font-lock-maximum-decoration t))
+                    (font-spec :family "Sarasa Fixed CL"))
+  (setq font-lock-maximum-decoration t)
+
+  (defun my/org-or-markdown-file-p ()
+    "Return non-nil if current buffer is a real Org/Markdown file."
+    (and buffer-file-name
+         (or (and (derived-mode-p 'org-mode)
+                  (string-match-p "\\.org\\'" buffer-file-name))
+             (and (derived-mode-p 'markdown-mode)
+                  (string-match-p "\\.md\\'" buffer-file-name)))))
+
+  (defun my/use-sarasa-fixed-cl-for-org-markdown-files ()
+    "Use Sarasa Fixed CL only for real Org/Markdown files."
+    (when (my/org-or-markdown-file-p)
+      (setq-local buffer-face-mode-face
+                  '(:family "Sarasa Fixed CL" :height 160))
+      (buffer-face-mode 1)))
+
+  (add-hook 'org-mode-hook #'my/use-sarasa-fixed-cl-for-org-markdown-files)
+  (add-hook 'markdown-mode-hook #'my/use-sarasa-fixed-cl-for-org-markdown-files))
+
 
 
 (use-package emacs
@@ -31,7 +50,7 @@
   (setq whitespace-style '(face tabs tab-mark trailing spaces space-mark))
   (setq whitespace-display-mappings
         '((tab-mark 9 [187 9] [92 9])        ; [TAB] -> >>
-        ;;  (space-mark 32 [183] [46])         ; [space] -> .
+          ;;  (space-mark 32 [183] [46])         ; [space] -> .
           (fullwidth-space 12288 [9633]))))
 
 (use-package emacs
@@ -77,7 +96,7 @@
     ;; function
     ;; (when (facep 'lsp-bridge-semantic-tokens-function-face)
     ;;   (set-face-attribute 'lsp-bridge-semantic-tokens-function-face nil
-                          ;; :foreground "#31e9d9"))
+    ;; :foreground "#31e9d9"))
 
     ;; method
     ;; (when (facep 'lsp-bridge-semantic-tokens-method-face)

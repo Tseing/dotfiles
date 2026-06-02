@@ -54,3 +54,7 @@ loc
 tol
 proc
 goto
+pre
+dataclass
+abstractmethod
+judgement

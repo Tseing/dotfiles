@@ -1,4 +1,4 @@
-;;; init-startup --- setttings for startup -*- lexical-binding: t-*-
+;;; init-startup --- settings for startup -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;;; Code:
@@ -17,5 +17,13 @@
 (setq undo-limit (* 80 1024 1024)
       undo-strong-limit (* 120 1024 1024)
       undo-outer-limit (* 360 1024 1024))
+
+(unless (file-directory-p (expand-file-name "cache/" user-emacs-directory))
+  (make-directory (expand-file-name "cache/" user-emacs-directory) t))
+
+(setq backup-directory-alist
+      `(("." . ,(expand-file-name "cache/" user-emacs-directory))))
+(setq auto-save-file-name-transforms
+      `((".*" ,(expand-file-name "cache/" user-emacs-directory) t)))
 (provide 'init-startup)
 ;;; init-startup.el ends here

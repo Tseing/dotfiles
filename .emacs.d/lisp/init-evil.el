@@ -54,7 +54,7 @@
 
   ;; Let modes like org-mode handle RET when needed.
   (with-eval-after-load 'evil-maps
-    ;; (define-key evil-motion-state-map (kbd "RET") nil)
+    (define-key evil-motion-state-map (kbd "RET") nil)
     (define-key evil-insert-state-map (kbd "C-k") nil)))
 
 (use-package evil-collection
