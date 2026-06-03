@@ -65,7 +65,7 @@
         '((sequence "TODO(t)" "SCH(s)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CANCELED(c)")))
 
   (setq org-capture-templates
-        '(("i" "Personal inbox" entry
+        '(("p" "Personal inbox" entry
            (file "~/Documents/org/agenda/inbox.org")
            "* TODO %?\n  %U\n  %a")
 
@@ -140,11 +140,11 @@
 
   (with-eval-after-load 'evil
     (evil-define-key 'normal zathura-outline-mode-map
+      (kbd "q") #'bury-buffer
       (kbd "<return>") #'zathura-outline-view
       (kbd "s-<return>") #'zathura-outline-jump))
 
   (evil-define-key 'normal org-mode-map
     (kbd "s-<return>") #'zathura-jump-link-at-point))
-
 (provide 'init-org)
 ;;; init-org.el ends here

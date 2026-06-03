@@ -204,17 +204,18 @@
 (use-package paredit
   :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
   :config
-  (defun my/lisp-like-mode-p (endp delimiter)
-    (derived-mode-p 'emacs-lisp-mode
-                    'lisp-mode
-                    'lisp-interaction-mode
-                    'scheme-mode
-                    'clojure-mode
-                    'ielm-mode))
+  (defconst my/lisp-like-modes
+    '(emacs-lisp-mode lisp-mode lisp-interaction-mode
+                      scheme-mode clojure-mode ielm-mode inferior-emacs-lisp-mode))
+
+  (defun my/lisp-like-mode-p ()
+    (apply #'derived-mode-p my/lisp-like-modes))
+
+  (defun my/paredit-space-for-delimiter-p (_endp _delimiter)
+    (my/lisp-like-mode-p))
 
   (setq paredit-space-for-delimiter-predicates
-        (list #'my/lisp-like-mode-p))
-
+        '(my/paredit-space-for-delimiter-p))
   (defun my/paredit-keys-for-non-lisp ()
     (unless (my/lisp-like-mode-p)
       (define-key paredit-mode-map (kbd "RET") nil)
