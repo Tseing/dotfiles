@@ -58,3 +58,5 @@ pre
 dataclass
 abstractmethod
 judgement
+cls
+cnt

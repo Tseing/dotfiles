@@ -204,7 +204,7 @@
 (use-package paredit
   :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
   :config
-  (defun my/lisp-like-mode-p ()
+  (defun my/lisp-like-mode-p (endp delimiter)
     (derived-mode-p 'emacs-lisp-mode
                     'lisp-mode
                     'lisp-interaction-mode
