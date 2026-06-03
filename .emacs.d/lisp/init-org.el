@@ -62,7 +62,7 @@
   (setq org-return-follows-link t)
 
   (setq org-todo-keywords
-        '((sequence "TODO(t)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CANCELED(c)")))
+        '((sequence "TODO(t)" "SCH(s)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CANCELED(c)")))
 
   (setq org-capture-templates
         '(("i" "Personal inbox" entry
@@ -106,7 +106,17 @@
       (kbd "C-M-h") #'org-shiftleft
       (kbd "C-M-j") #'org-shiftdown
       (kbd "C-M-k") #'org-shiftup
-      (kbd "C-M-l") #'org-shiftright)))
+      (kbd "C-M-l") #'org-shiftright))
+
+  (with-eval-after-load 'org-agenda
+    (evil-define-key 'normal org-agenda-mode-map
+      (kbd "d") #'org-agenda-day-view
+      (kbd "w") #'org-agenda-week-view
+      (kbd "m") #'org-agenda-month-view
+      (kbd ".") #'org-agenda-goto-today
+      (kbd "J") #'org-agenda-later
+      (kbd "K") #'org-agenda-earlier
+      (kbd "q") #'org-agenda-quit)))
 
 (use-package org-download
   :after org
