@@ -3,12 +3,13 @@
 ;;; Code:
 
 (add-to-list 'load-path
-     (expand-file-name "lisp" user-emacs-directory))
+             (expand-file-name "lisp" user-emacs-directory))
 
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 
 (require 'init-startup)
 (require 'init-straight)
+(require 'init-env)
 (require 'init-evil)
 (require 'init-ui)
 (require 'init-packages)
