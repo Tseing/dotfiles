@@ -69,3 +69,11 @@ mixin
 resettable
 validatable
 classmethod
+cpp
+cxx
+hpp
+hh
+hxx
+tsx
+vue
+md

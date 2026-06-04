@@ -9,13 +9,15 @@
   (setq treesit-language-source-alist
         '((python "https://github.com/tree-sitter/tree-sitter-python" "v0.23.2")
           (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
+          (c "https://github.com/tree-sitter/tree-sitter-c" "v0.23.2")
+          (cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.2")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
           (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")
           (qmljs "https://github.com/yuja/tree-sitter-qmljs"))
         treesit-font-lock-level 4))
 
-(use-package python
+(use-package python-ts-mode
   :straight nil
   :init
   (setq python-indent-offset 4)
@@ -28,6 +30,25 @@
   :init
   (setq rust-ts-mode-indent-offset 4)
   :mode ("\\.rs\\'" . rust-ts-mode))
+
+(use-package c-ts-mode
+  :straight nil
+  :init
+  (setq c-ts-mode-indent-offset 4
+        c-ts-mode-enable-doxygen t)
+  (add-to-list 'major-mode-remap-alist
+               '(c-mode . c-ts-mode))
+  (add-to-list 'major-mode-remap-alist
+               '(c++-mode . c++-ts-mode))
+  :mode
+  (("\\.c\\'" . c-ts-mode)
+   ("\\.h\\'" . c-ts-mode)
+   ("\\.cc\\'" . c++-ts-mode)
+   ("\\.cpp\\'" . c++-ts-mode)
+   ("\\.cxx\\'" . c++-ts-mode)
+   ("\\.hpp\\'" . c++-ts-mode)
+   ("\\.hh\\'" . c++-ts-mode)
+   ("\\.hxx\\'" . c++-ts-mode)))
 
 (use-package typescript-ts-mode
   :straight nil
@@ -153,6 +174,8 @@
   ((emacs-lisp-mode . flycheck-mode)
    (python-ts-mode . my/python-flycheck-setup)
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
+   (c-ts-mode . my/lsp-bridge-flycheck-setup)
+   (c++-ts-mode . my/lsp-bridge-flycheck-setup)
    (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
    (vue-mode . my/lsp-bridge-flycheck-setup)
@@ -165,6 +188,8 @@
     "Flycheck frontend for lsp-bridge diagnostics."
     :start #'my/flycheck-lsp-bridge-start
     :modes '(rust-ts-mode
+             c-ts-mode
+             c++-ts-mode
              typescript-ts-mode
              tsx-ts-mode
              vue-mode
@@ -212,6 +237,8 @@
   :hook
   ((python-ts-mode . lsp-bridge-mode)
    (rust-ts-mode . lsp-bridge-mode)
+   (c-ts-mode . lsp-bridge-mode)
+   (c++-ts-mode . lsp-bridge-mode)
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
    (vue-mode . lsp-bridge-mode)
@@ -230,7 +257,8 @@
         (expand-file-name "multiserver/" user-emacs-directory)
         ;; Default Python stack: basedpyright
         lsp-bridge-python-multi-lsp-server "basedpyright_ruff"
-        lsp-bridge-python-lsp-server "basedpyright")
+        lsp-bridge-python-lsp-server "basedpyright"
+        lsp-bridge-c-lsp-server "clangd")
   :config
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
@@ -275,6 +303,12 @@
 
   (setf (alist-get 'rust-ts-mode apheleia-mode-alist)
         'rustfmt)
+
+  (setf (alist-get 'c-ts-mode apheleia-mode-alist)
+        'clang-format)
+
+  (setf (alist-get 'c++-ts-mode apheleia-mode-alist)
+        'clang-format)
 
   (setf (alist-get 'typescript-ts-mode apheleia-mode-alist)
         'prettier)
