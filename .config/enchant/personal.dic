@@ -78,3 +78,15 @@ tsx
 vue
 md
 rebase
+api
+healthz
+params
+rerank
+frontend
+cfg
+Postgres
+addr
+tcp
+req
+uri
+ctrl
