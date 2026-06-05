@@ -25,5 +25,7 @@
       `(("." . ,(expand-file-name "cache/" user-emacs-directory))))
 (setq auto-save-file-name-transforms
       `((".*" ,(expand-file-name "cache/" user-emacs-directory) t)))
+(setq org-preview-latex-image-directory
+      (expand-file-name "ltximg/" (expand-file-name "cache/" user-emacs-directory)))
 (provide 'init-startup)
 ;;; init-startup.el ends here

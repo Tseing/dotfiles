@@ -70,7 +70,6 @@
   (setq org-startup-indented t)
   (setq org-return-follows-link t)
   ;; Latex formula
-  (setq org-startup-with-latex-preview t)
   (setq org-preview-latex-default-process 'dvisvgm)
   (setq org-format-latex-options
         (plist-put org-format-latex-options :scale 1.5))
