@@ -38,6 +38,14 @@
   (setq org-refile-targets my/org-refile-work-targets)
   (message "Org workspace: work"))
 
+(defun my/org-open-inbox ()
+  "Open inbox for current Org workspace."
+  (interactive)
+  (find-file
+   (pcase my/org-workspace
+     ('personal "~/Documents/org/agenda/inbox.org")
+     ('work "~/Documents/org/work/inbox.org")
+     (_ "~/Documents/org/agenda/inbox.org"))))
 
 (with-eval-after-load 'evil
   (evil-define-key 'normal global-map
@@ -47,6 +55,7 @@
     ;; Agenda
     (kbd "SPC a p") #'my/org-agenda-personal
     (kbd "SPC a w") #'my/org-agenda-work
+    (kbd "SPC a i") #'my/org-open-inbox
     (kbd "SPC a a") #'org-agenda-list
     (kbd "SPC a t") #'org-todo-list))
 
@@ -60,6 +69,11 @@
   :config
   (setq org-startup-indented t)
   (setq org-return-follows-link t)
+  ;; Latex formula
+  (setq org-startup-with-latex-preview t)
+  (setq org-preview-latex-default-process 'dvisvgm)
+  (setq org-format-latex-options
+        (plist-put org-format-latex-options :scale 1.5))
 
   (setq org-todo-keywords
         '((sequence "TODO(t)" "SCH(s)" "NEXT(n)" "WAIT(w)" "|" "DONE(d)" "CANCELED(c)")))
@@ -89,6 +103,7 @@
       (kbd "SPC t l") #'org-toggle-link-display
       (kbd "SPC t i") #'org-toggle-inline-images
       (kbd "SPC t t") #'org-todo
+      (kbd "SPC t f") #'org-latex-preview
 
       ;; Move/promote/demote headline.
       (kbd "M-h") #'org-metaleft
