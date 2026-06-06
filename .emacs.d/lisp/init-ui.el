@@ -2,15 +2,65 @@
 
 ;;; Commentary:
 ;;; Code:
+(defun my/scan-sarasa-width ()
+  (interactive)
+  (let ((old-buffer (window-buffer))
+        (test-buffer (get-buffer-create " *font-width-test*"))
+        (font-family "Sarasa Fixed CL"))
+    (unwind-protect
+        (progn
+          (set-window-buffer nil test-buffer)
+          (with-current-buffer test-buffer
+            (dolist (height (number-sequence 100 240 5))
+              (erase-buffer)
+              (setq-local face-remapping-alist nil)
+              (face-remap-add-relative 'default
+                                       :family font-family
+                                       :height height)
+              (redisplay)
+              (let ((a-width nil)
+                    (han-width nil))
+                (erase-buffer)
+                (insert "a")
+                (redisplay)
+                (setq a-width
+                      (car (window-text-pixel-size nil (point-min) (point-max))))
+
+                (erase-buffer)
+                (insert "云")
+                (redisplay)
+                (setq han-width
+                      (car (window-text-pixel-size nil (point-min) (point-max))))
+
+                (message "height=%s size=%s a=%s 云=%s %s"
+                         height
+                         (font-get (font-at (point-min)) :size)
+                         a-width
+                         han-width
+                         (if (= han-width (* 2 a-width))
+                             "OK"
+                           "BAD"))))))
+      (set-window-buffer nil old-buffer))))
 
 (use-package emacs
   :straight nil
-  :init
+  :config
+  (defconst my/latin-font "Maple Mono")
+  (defconst my/cjk-font "Sarasa Fixed CL")
+  (defconst my/org-font "Sarasa Fixed CL")
+  (defconst my/font-height 150)
+
   (set-face-attribute 'default nil
-                      :font "Maple Mono"
-                      :height 160)
-  (set-fontset-font t 'han
-                    (font-spec :family "Sarasa Fixed CL"))
+                      :family my/latin-font
+                      :height my/font-height)
+
+  (set-face-attribute 'fixed-pitch nil
+                      :family my/latin-font
+                      :height my/font-height)
+
+  (dolist (script '(han kana hangul cjk-misc bopomofo))
+    (set-fontset-font t script (font-spec :family my/cjk-font) nil 'prepend))
+
   (setq font-lock-maximum-decoration t)
 
   (defun my/org-or-markdown-file-p ()
@@ -21,18 +71,26 @@
              (and (derived-mode-p 'markdown-mode)
                   (string-match-p "\\.md\\'" buffer-file-name)))))
 
-  (defun my/use-sarasa-fixed-cl-for-org-markdown-files ()
-    "Use Sarasa Fixed CL only for real Org/Markdown files."
+  (defvar-local my/org-face-remap-cookie nil)
+
+  (defun my/use-sarasa-for-org-markdown ()
+    "Use Sarasa Fixed CL for Org/Markdown buffers without affecting other buffers."
     (when (my/org-or-markdown-file-p)
-      (setq-local buffer-face-mode-face
-                  '(:family "Sarasa Fixed CL" :height 160))
-      (buffer-face-mode 1)))
+      (when my/org-face-remap-cookie
+        (face-remap-remove-relative my/org-face-remap-cookie))
+      (setq my/org-face-remap-cookie
+            (face-remap-add-relative 'default
+                                     :family my/org-font
+                                     :height my/font-height))))
 
-  (add-hook 'org-mode-hook #'my/use-sarasa-fixed-cl-for-org-markdown-files)
-  (add-hook 'markdown-mode-hook #'my/use-sarasa-fixed-cl-for-org-markdown-files))
+  (add-hook 'org-mode-hook #'my/use-sarasa-for-org-markdown)
+  (add-hook 'markdown-mode-hook #'my/use-sarasa-for-org-markdown)
 
-
-
+  (with-eval-after-load 'org
+    (when (facep 'org-table)
+      (set-face-attribute 'org-table nil
+                          :family my/org-font
+                          :height my/font-height))))
 (use-package emacs
   :straight nil
   :config

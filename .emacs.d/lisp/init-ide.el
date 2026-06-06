@@ -56,7 +56,7 @@
   (("\\.ts\\'" . typescript-ts-mode)
    ("\\.tsx\\'" . tsx-ts-mode)))
 
-(use-package vue-mode
+(use-package web-mode
   :mode "\\.vue\\'")
 
 (use-package markdown-mode
@@ -264,9 +264,13 @@
             #'my/lsp-bridge-flycheck-refresh)
 
   (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
+  (add-to-list 'lsp-bridge-completion-in-string-file-types "vue")
   (my/lsp-bridge-set-multiserver-for-extension
    "tsx"
    "typescriptreact_eslint_tailwindcss")
+  (my/lsp-bridge-set-multiserver-for-extension
+   "vue"
+   "volar_vtsls_tailwindcss")
 
   (with-eval-after-load 'evil
     (define-key evil-normal-state-map (kbd "SPC r n") #'lsp-bridge-rename)
