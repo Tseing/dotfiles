@@ -13,7 +13,9 @@
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.2")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
+          (vue "https://github.com/ikatyang/tree-sitter-vue")
           (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
           (qmljs "https://github.com/yuja/tree-sitter-qmljs"))
         treesit-font-lock-level 4))
 
@@ -56,7 +58,8 @@
   (("\\.ts\\'" . typescript-ts-mode)
    ("\\.tsx\\'" . tsx-ts-mode)))
 
-(use-package web-mode
+(use-package vue-ts-mode
+  :straight (:type git :host github :repo "8uff3r/vue-ts-mode")
   :mode "\\.vue\\'")
 
 (use-package markdown-mode
@@ -65,6 +68,12 @@
 (use-package yaml-ts-mode
   :straight nil
   :mode ("\\.ya?ml\\'" . yaml-ts-mode))
+
+(use-package json-ts-mode
+  :straight nil
+  :mode
+  (("\\.json\\'" . json-ts-mode)
+   ("\\.jsonc\\'" . json-ts-mode)))
 
 (use-package qml-ts-mode
   :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
@@ -178,7 +187,7 @@
    (c++-ts-mode . my/lsp-bridge-flycheck-setup)
    (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
-   (vue-mode . my/lsp-bridge-flycheck-setup)
+   (vue-ts-mode . my/lsp-bridge-flycheck-setup)
    (qml-ts-mode . my/lsp-bridge-flycheck-setup))
   :bind
   (("M-n" . flycheck-next-error)
@@ -192,7 +201,7 @@
              c++-ts-mode
              typescript-ts-mode
              tsx-ts-mode
-             vue-mode
+             vue-ts-mode
              qml-ts-mode))
 
   (flycheck-define-generic-checker 'lsp-bridge-python-mypy
@@ -241,7 +250,7 @@
    (c++-ts-mode . lsp-bridge-mode)
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
-   (vue-mode . lsp-bridge-mode)
+   (vue-ts-mode . lsp-bridge-mode)
    (qml-ts-mode . lsp-bridge-mode))
   :init
   (setq lsp-bridge-enable-diagnostics t
@@ -308,20 +317,11 @@
   (setf (alist-get 'rust-ts-mode apheleia-mode-alist)
         'rustfmt)
 
-  (setf (alist-get 'c-ts-mode apheleia-mode-alist)
-        'clang-format)
+  (dolist (mode '(c-ts-mode c++-ts-mode))
+    (setf (alist-get mode apheleia-mode-alist) 'clang-format))
 
-  (setf (alist-get 'c++-ts-mode apheleia-mode-alist)
-        'clang-format)
-
-  (setf (alist-get 'typescript-ts-mode apheleia-mode-alist)
-        'prettier)
-
-  (setf (alist-get 'tsx-ts-mode apheleia-mode-alist)
-        'prettier)
-
-  (setf (alist-get 'vue-mode apheleia-mode-alist)
-        'prettier)
+  (dolist (mode '(typescript-ts-mode tsx-ts-mode vue-ts-mode json-ts-mode yaml-ts-mode))
+    (setf (alist-get mode apheleia-mode-alist) 'prettier))
 
   (setf (alist-get 'qmlformat apheleia-formatters)
         '("qmlformat" filepath))
