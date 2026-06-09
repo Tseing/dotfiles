@@ -1,4 +1,4 @@
-;;; init-packages --- settings for packages
+;;; init-packages --- settings for packages -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;;; Code:
@@ -223,6 +223,31 @@
       (define-key paredit-mode-map (kbd "C-j") nil)))
 
   (add-hook 'paredit-mode-hook #'my/paredit-keys-for-non-lisp))
+
+(use-package treesit-fold
+  :straight (treesit-fold :type git
+                          :host github
+                          :repo "emacs-tree-sitter/treesit-fold")
+  :hook (prog-mode . treesit-fold-mode)
+  :config
+  (defun my/treesit-fold-range-qml-ui-object-definition (node offset)
+    (when-let ((initializer
+                (treesit-node-child-by-field-name node "initializer")))
+      (treesit-fold-range-seq initializer offset)))
+
+  (setf (alist-get 'qml-ts-mode treesit-fold-range-alist)
+        '((ui_object_definition . my/treesit-fold-range-qml-ui-object-definition)
+          (ui_object_array      . treesit-fold-range-seq)
+          (array                . treesit-fold-range-seq)
+          (object               . treesit-fold-range-seq)
+          (statement_block      . treesit-fold-range-seq)
+          (class_body           . treesit-fold-range-seq)))
+
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal treesit-fold-mode-map
+      (kbd "<tab>") #'treesit-fold-toggle
+      (kbd "<backtab>") #'treesit-fold-open-all)))
+
 
 (use-package envrc
   :hook (after-init . envrc-global-mode))
