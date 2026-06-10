@@ -21,27 +21,20 @@
 
 (use-package python-ts-mode
   :straight nil
+  :mode ("\\.py\\'" . python-ts-mode)
   :init
   (setq python-indent-offset 4)
   (add-to-list 'major-mode-remap-alist
-               '(python-mode . python-ts-mode))
-  :mode ("\\.py\\'" . python-ts-mode))
+               '(python-mode . python-ts-mode)))
 
 (use-package rust-ts-mode
   :straight nil
+  :mode ("\\.rs\\'" . rust-ts-mode)
   :init
-  (setq rust-ts-mode-indent-offset 4)
-  :mode ("\\.rs\\'" . rust-ts-mode))
+  (setq rust-ts-mode-indent-offset 4))
 
 (use-package c-ts-mode
   :straight nil
-  :init
-  (setq c-ts-mode-indent-offset 4
-        c-ts-mode-enable-doxygen t)
-  (add-to-list 'major-mode-remap-alist
-               '(c-mode . c-ts-mode))
-  (add-to-list 'major-mode-remap-alist
-               '(c++-mode . c++-ts-mode))
   :mode
   (("\\.c\\'" . c-ts-mode)
    ("\\.h\\'" . c-ts-mode)
@@ -50,7 +43,14 @@
    ("\\.cxx\\'" . c++-ts-mode)
    ("\\.hpp\\'" . c++-ts-mode)
    ("\\.hh\\'" . c++-ts-mode)
-   ("\\.hxx\\'" . c++-ts-mode)))
+   ("\\.hxx\\'" . c++-ts-mode))
+  :init
+  (setq c-ts-mode-indent-offset 4
+        c-ts-mode-enable-doxygen t)
+  (add-to-list 'major-mode-remap-alist
+               '(c-mode . c-ts-mode))
+  (add-to-list 'major-mode-remap-alist
+               '(c++-mode . c++-ts-mode)))
 
 (use-package typescript-ts-mode
   :straight nil
@@ -77,7 +77,9 @@
 
 (use-package qml-ts-mode
   :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
-  :mode "\\.qml\\'")
+  :mode "\\.qml\\'"
+  :init
+  (setq qml-ts-mode-indent-offset 2))
 
 (use-package yasnippet
   :config
