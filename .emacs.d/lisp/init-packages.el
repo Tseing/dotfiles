@@ -204,6 +204,9 @@
 (use-package paredit
   :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
   :config
+  (define-key paredit-mode-map (kbd "{") #'paredit-open-curly)
+  (define-key paredit-mode-map (kbd "}") #'paredit-close-curly)
+
   (defconst my/lisp-like-modes
     '(emacs-lisp-mode lisp-mode lisp-interaction-mode
                       scheme-mode clojure-mode ielm-mode inferior-emacs-lisp-mode))
@@ -216,11 +219,23 @@
 
   (setq paredit-space-for-delimiter-predicates
         '(my/paredit-space-for-delimiter-p))
+
   (defun my/paredit-keys-for-non-lisp ()
     (unless (my/lisp-like-mode-p)
-      (define-key paredit-mode-map (kbd "RET") nil)
-      (define-key paredit-mode-map (kbd "DEL") nil)
-      (define-key paredit-mode-map (kbd "C-j") nil)))
+      (let ((map (copy-keymap paredit-mode-map)))
+        ;; Remove paredit bindings from the copied map.
+        ;; Then Emacs falls through to major-mode/global bindings.
+        (define-key map (kbd "RET") nil)
+        (define-key map (kbd "C-m") nil)
+        (define-key map (kbd "DEL") nil)
+        (define-key map (kbd "<backspace>") nil)
+        (define-key map (kbd "C-j") nil)
+
+        (setq-local minor-mode-overriding-map-alist
+                    (assq-delete-all 'paredit-mode
+                                     minor-mode-overriding-map-alist))
+        (push `(paredit-mode . ,map)
+              minor-mode-overriding-map-alist))))
 
   (add-hook 'paredit-mode-hook #'my/paredit-keys-for-non-lisp))
 

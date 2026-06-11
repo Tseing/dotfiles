@@ -52,6 +52,29 @@
   (add-to-list 'major-mode-remap-alist
                '(c++-mode . c++-ts-mode)))
 
+(use-package web-mode
+  :mode
+  (("\\.html\\'" . web-mode)
+   ("\\.html\\.j2\\'" . web-mode)
+   ("\\.html\\.jinja\\'" . web-mode)
+   ("\\.html\\.jinja2\\'" . web-mode)
+   ("\\.j2\\'" . web-mode))
+  :config
+  (setq web-mode-engines-alist
+        '(("jinja" . "\\.html\\.j2\\'")
+          ("jinja" . "\\.html\\.jinja\\'")
+          ("jinja" . "\\.html\\.jinja2\\'")
+          ("jinja" . "\\.j2\\'")))
+
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-css-indent-offset 2)
+  (setq web-mode-code-indent-offset 2)
+
+
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal web-mode-map
+      (kbd "<tab>") #'web-mode-fold-or-unfold)))
+
 (use-package typescript-ts-mode
   :straight nil
   :mode

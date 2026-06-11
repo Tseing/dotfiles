@@ -11,3 +11,8 @@
 
 !site-lisp/
 !site-lisp/**
+
+!langserver/
+!langserver/**
+!multiserver/
+!multiserver/**
