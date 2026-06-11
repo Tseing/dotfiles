@@ -52,6 +52,14 @@
   (add-to-list 'major-mode-remap-alist
                '(c++-mode . c++-ts-mode)))
 
+(use-package fsharp-ts-mode
+  :straight (:type git :host github :repo "bbatsov/fsharp-ts-mode")
+  :mode
+  (("\\.fs\\'" . fsharp-ts-mode)
+   ("\\.fsi\\'" . fsharp-ts-mode)
+   ("\\.fsx\\'" . fsharp-ts-mode)
+   ("\\.fsproj\\'" . xml-mode)))
+
 (use-package web-mode
   :mode
   (("\\.html\\'" . web-mode)
@@ -69,7 +77,6 @@
   (setq web-mode-markup-indent-offset 2)
   (setq web-mode-css-indent-offset 2)
   (setq web-mode-code-indent-offset 2)
-
 
   (with-eval-after-load 'evil
     (evil-define-key 'normal web-mode-map
@@ -97,6 +104,10 @@
   :mode
   (("\\.json\\'" . json-ts-mode)
    ("\\.jsonc\\'" . json-ts-mode)))
+
+(use-package xml-mode
+  :straight nil
+  :mode "\\.xml\\'")
 
 (use-package qml-ts-mode
   :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
@@ -210,6 +221,7 @@
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
    (c-ts-mode . my/lsp-bridge-flycheck-setup)
    (c++-ts-mode . my/lsp-bridge-flycheck-setup)
+   (fsharp-ts-mode . my/lsp-bridge-flycheck-setup)
    (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
    (vue-ts-mode . my/lsp-bridge-flycheck-setup)
@@ -224,6 +236,7 @@
     :modes '(rust-ts-mode
              c-ts-mode
              c++-ts-mode
+             fsharp-ts-mode
              typescript-ts-mode
              tsx-ts-mode
              vue-ts-mode
@@ -273,6 +286,7 @@
    (rust-ts-mode . lsp-bridge-mode)
    (c-ts-mode . lsp-bridge-mode)
    (c++-ts-mode . lsp-bridge-mode)
+   (fsharp-ts-mode . lsp-bridge-mode)
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
    (vue-ts-mode . lsp-bridge-mode)
@@ -296,6 +310,9 @@
   :config
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
+
+  (add-to-list 'lsp-bridge-single-lang-server-mode-list
+               '((fsharp-mode fsharp-ts-mode) . "fsautocomplete"))
 
   (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
   (add-to-list 'lsp-bridge-completion-in-string-file-types "vue")
