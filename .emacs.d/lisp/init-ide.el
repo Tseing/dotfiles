@@ -58,7 +58,7 @@
   (("\\.fs\\'" . fsharp-ts-mode)
    ("\\.fsi\\'" . fsharp-ts-mode)
    ("\\.fsx\\'" . fsharp-ts-mode)
-   ("\\.fsproj\\'" . xml-mode)))
+   ("\\.fsproj\\'" . nxml-mode)))
 
 (use-package web-mode
   :mode
@@ -105,7 +105,7 @@
   (("\\.json\\'" . json-ts-mode)
    ("\\.jsonc\\'" . json-ts-mode)))
 
-(use-package xml-mode
+(use-package nxml-mode
   :straight nil
   :mode "\\.xml\\'")
 
@@ -311,11 +311,14 @@
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
 
+  (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
+  (add-to-list 'lsp-bridge-completion-in-string-file-types "vue")
+
+  ;; langserver defined here
   (add-to-list 'lsp-bridge-single-lang-server-mode-list
                '((fsharp-mode fsharp-ts-mode) . "fsautocomplete"))
 
-  (add-to-list 'lsp-bridge-completion-in-string-file-types "tsx")
-  (add-to-list 'lsp-bridge-completion-in-string-file-types "vue")
+  ;; multiserver defined here
   (my/lsp-bridge-set-multiserver-for-extension
    "tsx"
    "typescriptreact_eslint_tailwindcss")
@@ -364,6 +367,11 @@
 
   (dolist (mode '(typescript-ts-mode tsx-ts-mode vue-ts-mode json-ts-mode yaml-ts-mode))
     (setf (alist-get mode apheleia-mode-alist) 'prettier))
+
+  (setf (alist-get 'fantomas apheleia-formatters)
+        '("dotnet" "fantomas" inplace))
+  (setf (alist-get 'fsharp-ts-mode apheleia-mode-alist)
+        'fantomas)
 
   (setf (alist-get 'qmlformat apheleia-formatters)
         '("qmlformat" filepath))
