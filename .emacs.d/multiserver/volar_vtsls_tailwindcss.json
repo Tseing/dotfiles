@@ -1,0 +1,24 @@
+{
+  "default": "volar",
+  "servers": ["volar", "vtsls", "tailwindcss"],
+
+  "completion": ["volar", "vtsls", "tailwindcss"],
+  "completion_item_resolve": ["volar", "vtsls"],
+  "diagnostics": ["volar"],
+
+  "find_define": "vtsls",
+  "find_type_define": "vtsls",
+  "find_implementation": "vtsls",
+  "find_references": "vtsls",
+
+  "formatting": "volar",
+  "hover": "volar",
+  "signature_help": "vtsls",
+
+  "rename": "volar",
+  "prepare_rename": "volar",
+
+  "document_highlight": "volar",
+  "workspace_symbol": "vtsls",
+  "semantic_tokens": "volar"
+}
