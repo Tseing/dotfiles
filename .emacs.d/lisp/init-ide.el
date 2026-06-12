@@ -93,7 +93,9 @@
   :mode "\\.vue\\'")
 
 (use-package markdown-mode
-  :mode "\\.md\\'")
+  :mode "\\.md\\'"
+  :config
+  (setq markdown-list-item-bullets '("•")))
 
 (use-package yaml-ts-mode
   :straight nil
