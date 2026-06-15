@@ -280,10 +280,10 @@
   :hook ((text-mode prog-mode conf-mode) . cspell-mode)
   :config
   (with-eval-after-load 'evil
-    (define-key evil-normal-state-map (kbd "]s") #'cspell-next)
-    (define-key evil-normal-state-map (kbd "[s") #'cspell-previous)
-    (define-key evil-normal-state-map (kbd "z=") #'cspell-correct)
-    ))
+    (evil-define-key 'normal cspell-mode-map
+      (kbd "]s") #'cspell-next
+      (kbd "[s") #'cspell-previous
+      (kbd "z=") #'cspell-correct)))
 
 
 (provide 'init-packages)

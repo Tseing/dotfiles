@@ -59,16 +59,21 @@ Nil means enable in all buffers except excluded modes."
   "Face used for misspelled words.")
 
 (defvar-local cspell--timer nil)
-(defvar-local cspell--process nil)
 (defvar-local cspell--check-id 0)
+(defvar-local cspell--request-id nil)
 (defvar-local cspell--overlays nil)
 (defvar-local cspell--ignored-words nil)
+
+(defvar cspell--session-process nil)
+(defvar cspell--session-stdout-buffer nil)
+(defvar cspell--session-stderr-buffer nil)
+(defvar cspell--session-output "")
+(defvar cspell--request-seq 0)
+(defvar cspell--pending-requests (make-hash-table :test #'eql))
 
 (defvar cspell-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "M-$") #'cspell-correct)
-    (define-key map (kbd "M-n") #'cspell-next)
-    (define-key map (kbd "M-p") #'cspell-previous)
     (define-key map (kbd "C-c $ b") #'cspell-check-buffer)
     (define-key map (kbd "C-c $ i") #'cspell-ignore-word-at-point)
     map)
@@ -112,17 +117,21 @@ Nil means enable in all buffers except excluded modes."
       (and (file-executable-p cspell-executable)
            cspell-executable)))
 
-(defun cspell--request-data ()
-  "Build the JSON request for the helper."
-  (json-encode
-   `((cspellCommand . ,(cspell--cspell-command))
-     (uri . ,(cspell--buffer-file-name))
-     (text . ,(buffer-substring-no-properties (point-min) (point-max)))
-     (languageId . ,(symbol-name major-mode))
-     (locale . nil)
-     (configFile . ,(when cspell-config
-                      (expand-file-name cspell-config)))
-     (root . ,(cspell--project-root)))))
+(defun cspell--make-request ()
+  "Return `(REQUEST-ID . JSON-PAYLOAD)' for the helper."
+  (let ((request-id (cl-incf cspell--request-seq)))
+    (cons
+     request-id
+     (json-encode
+      `((requestId . ,request-id)
+        (cspellCommand . ,(cspell--cspell-command))
+        (uri . ,(cspell--buffer-file-name))
+        (text . ,(buffer-substring-no-properties (point-min) (point-max)))
+        (languageId . ,(symbol-name major-mode))
+        (locale . nil)
+        (configFile . ,(when cspell-config
+                         (expand-file-name cspell-config)))
+        (root . ,(cspell--project-root)))))))
 
 (defun cspell--delete-overlays (&optional beg end)
   "Delete CSpell overlays between BEG and END."
@@ -190,46 +199,86 @@ Nil means enable in all buffers except excluded modes."
   "Parse helper OUTPUT into a plist."
   (json-parse-string output :object-type 'plist :array-type 'list))
 
-(defun cspell--sentinel (buffer check-id output-buffer error-buffer proc _event)
-  "Process sentinel for CSpell."
-  (when (memq (process-status proc) '(exit signal))
-    (let ((output
-           (when (buffer-live-p output-buffer)
-             (with-current-buffer output-buffer
-               (buffer-string))))
-          (errors
-           (when (buffer-live-p error-buffer)
-             (with-current-buffer error-buffer
-               (buffer-string)))))
-      (when (buffer-live-p output-buffer)
-        (kill-buffer output-buffer))
-      (when (buffer-live-p error-buffer)
-        (kill-buffer error-buffer))
-      (when (and output
-                 (buffer-live-p buffer))
-        (with-current-buffer buffer
-          (when (and cspell-mode
-                     (= check-id cspell--check-id))
-            (condition-case err
-                (let* ((response (cspell--parse-helper-output output))
-                       (issues (plist-get response :issues))
-                       (runtime-errors (plist-get response :errors)))
-                  (save-excursion
-                    (cspell--apply-issues issues))
-                  (when runtime-errors
-                    (message "CSpell helper reported issues: %s"
-                             (string-join runtime-errors "; "))))
-              (error
-               (message "CSpell helper parse failed: %s%s"
-                        (error-message-string err)
-                        (if (and errors (not (string-empty-p errors)))
-                            (format " (%s)" (string-trim errors))
-                          "")))))))
-      (when (and (not output)
-                 errors
-                 (buffer-live-p buffer))
-        (with-current-buffer buffer
-          (message "CSpell helper failed: %s" (string-trim errors)))))))
+(defun cspell--stderr-string ()
+  "Return helper stderr output."
+  (when (buffer-live-p cspell--session-stderr-buffer)
+    (with-current-buffer cspell--session-stderr-buffer
+      (buffer-string))))
+
+(defun cspell--handle-response (response)
+  "Handle helper RESPONSE."
+  (let* ((request-id (plist-get response :requestId))
+         (runtime-errors (plist-get response :errors))
+         (pending (and request-id
+                       (gethash request-id cspell--pending-requests))))
+    (when request-id
+      (remhash request-id cspell--pending-requests))
+    (if (not pending)
+        (when runtime-errors
+          (message "CSpell helper reported issues: %s"
+                   (string-join runtime-errors "; ")))
+      (let ((buffer (plist-get pending :buffer))
+            (check-id (plist-get pending :check-id)))
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (when (and cspell-mode
+                       (= check-id cspell--check-id)
+                       (equal request-id cspell--request-id))
+              (save-excursion
+                (cspell--apply-issues (plist-get response :issues)))
+              (when runtime-errors
+                (message "CSpell helper reported issues: %s"
+                         (string-join runtime-errors "; "))))))))))
+
+(defun cspell--process-filter (_proc chunk)
+  "Process helper stdout CHUNK."
+  (setq cspell--session-output (concat cspell--session-output chunk))
+  (while (string-match "\n" cspell--session-output)
+    (let ((line (substring cspell--session-output 0 (match-beginning 0))))
+      (setq cspell--session-output
+            (substring cspell--session-output (match-end 0)))
+      (unless (string-empty-p line)
+        (condition-case err
+            (cspell--handle-response (cspell--parse-helper-output line))
+          (error
+           (message "CSpell helper parse failed: %s%s"
+                    (error-message-string err)
+                    (if-let* ((errors (cspell--stderr-string))
+                              ((not (string-empty-p errors))))
+                        (format " (%s)" (string-trim errors))
+                      ""))))))))
+
+(defun cspell--process-sentinel (_proc _event)
+  "Handle helper process exit."
+  (clrhash cspell--pending-requests)
+  (setq cspell--session-process nil
+        cspell--session-output "")
+  (when (buffer-live-p cspell--session-stdout-buffer)
+    (kill-buffer cspell--session-stdout-buffer))
+  (when (buffer-live-p cspell--session-stderr-buffer)
+    (kill-buffer cspell--session-stderr-buffer))
+  (setq cspell--session-stdout-buffer nil
+        cspell--session-stderr-buffer nil))
+
+(defun cspell--ensure-session ()
+  "Ensure the persistent helper process is running."
+  (unless (process-live-p cspell--session-process)
+    (setq cspell--session-output ""
+          cspell--session-stdout-buffer (generate-new-buffer " *cspell-session*")
+          cspell--session-stderr-buffer (generate-new-buffer " *cspell-session-error*")
+          cspell--session-process
+          (make-process
+           :name "cspell-session"
+           :buffer cspell--session-stdout-buffer
+           :command (list cspell-node-executable
+                          (cspell--helper-script))
+           :connection-type 'pipe
+           :coding 'utf-8-unix
+           :noquery t
+           :filter #'cspell--process-filter
+           :sentinel #'cspell--process-sentinel
+           :stderr cspell--session-stderr-buffer)))
+  cspell--session-process)
 
 (defun cspell--start-check (_beg _end)
   "Start an async whole-buffer CSpell check."
@@ -237,29 +286,19 @@ Nil means enable in all buffers except excluded modes."
              (cspell--cspell-command)
              (executable-find cspell-node-executable)
              (< (point-min) (point-max)))
-    (when (process-live-p cspell--process)
-      (delete-process cspell--process))
     (cl-incf cspell--check-id)
-    (let* ((check-id cspell--check-id)
-           (buffer (current-buffer))
+    (let* ((buffer (current-buffer))
            (default-directory (cspell--project-root))
-           (request (cspell--request-data))
-           (outbuf (generate-new-buffer " *cspell-output*"))
-           (errbuf (generate-new-buffer " *cspell-error*"))
-           (proc (make-process
-                  :name "cspell"
-                  :buffer outbuf
-                  :command (list cspell-node-executable
-                                 (cspell--helper-script))
-                  :connection-type 'pipe
-                  :noquery t
-                  :sentinel
-                  (lambda (proc event)
-                    (cspell--sentinel buffer check-id outbuf errbuf proc event))
-                  :stderr errbuf)))
-      (setq cspell--process proc)
-      (process-send-string proc request)
-      (process-send-eof proc))))
+           (request (cspell--make-request))
+           (request-id (car request))
+           (payload (cdr request))
+           (proc (cspell--ensure-session)))
+      (setq cspell--request-id request-id)
+      (puthash request-id
+               (list :buffer buffer
+                     :check-id cspell--check-id)
+               cspell--pending-requests)
+      (process-send-string proc (concat payload "\n")))))
 
 (defun cspell--schedule ()
   "Schedule a whole-buffer check."
@@ -292,8 +331,9 @@ Nil means enable in all buffers except excluded modes."
   (let* ((default-directory (cspell--project-root))
          (buf (get-buffer-create "*cspell-debug*"))
          (cmd (list cspell-node-executable
-                    (cspell--helper-script)))
-         (request (cspell--request-data)))
+                    (cspell--helper-script)
+                    "--once"))
+         (request (cdr (cspell--make-request))))
     (with-current-buffer buf
       (erase-buffer)
       (insert (format "Directory: %s\nCommand: %S\n\n"
@@ -437,8 +477,6 @@ If BACKWARD is non-nil, search backward."
     (when cspell--timer
       (cancel-timer cspell--timer)
       (setq cspell--timer nil))
-    (when (process-live-p cspell--process)
-      (delete-process cspell--process))
     (cspell--delete-overlays)))
 
 ;;;###autoload

@@ -1,15 +1,7 @@
 import { existsSync, realpathSync } from "node:fs";
+import readline from "node:readline";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-
-function readStdin() {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    process.stdin.on("data", (chunk) => chunks.push(chunk));
-    process.stdin.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    process.stdin.on("error", reject);
-  });
-}
 
 function resolveCspellLibModule(cspellCommand) {
   const resolvedCommand = realpathSync(cspellCommand);
@@ -56,10 +48,29 @@ function normalizeIssue(issue) {
   };
 }
 
-async function main() {
-  const raw = await readStdin();
-  const request = JSON.parse(raw);
-  const { cspellCommand, uri, text, languageId, locale, configFile, root } = request;
+const moduleCache = new Map();
+
+async function getCspellApi(cspellCommand) {
+  const moduleUrl = resolveCspellLibModule(cspellCommand);
+
+  if (!moduleCache.has(moduleUrl)) {
+    moduleCache.set(moduleUrl, import(moduleUrl));
+  }
+
+  return moduleCache.get(moduleUrl);
+}
+
+async function handleRequest(request) {
+  const {
+    requestId = null,
+    cspellCommand,
+    uri,
+    text,
+    languageId,
+    locale,
+    configFile,
+    root,
+  } = request;
 
   if (!cspellCommand) {
     throw new Error("Missing cspellCommand");
@@ -72,8 +83,7 @@ async function main() {
     process.chdir(root);
   }
 
-  const moduleUrl = resolveCspellLibModule(cspellCommand);
-  const { fileToDocument, spellCheckDocumentRPC } = await import(moduleUrl);
+  const { fileToDocument, spellCheckDocumentRPC } = await getCspellApi(cspellCommand);
   const document = fileToDocument(uri, text, languageId, locale);
   const result = await spellCheckDocumentRPC(
     document,
@@ -87,13 +97,63 @@ async function main() {
     },
   );
 
-  const response = {
+  return {
+    requestId,
     issues: (result.issues || []).map(normalizeIssue),
     checked: Boolean(result.checked),
     errors: (result.errors || []).map((error) => error.message || String(error)),
   };
+}
 
+function writeResponse(response) {
   process.stdout.write(`${JSON.stringify(response)}\n`);
+}
+
+async function runOnce() {
+  const chunks = [];
+
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+
+  const request = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  writeResponse(await handleRequest(request));
+}
+
+async function runServer() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    let request;
+
+    try {
+      request = JSON.parse(line);
+      writeResponse(await handleRequest(request));
+    } catch (error) {
+      writeResponse({
+        requestId: request?.requestId ?? null,
+        issues: [],
+        checked: false,
+        errors: [error.message || String(error)],
+      });
+    }
+  }
+}
+
+async function main() {
+  if (process.argv.includes("--once")) {
+    await runOnce();
+    return;
+  }
+
+  await runServer();
 }
 
 main().catch((error) => {
