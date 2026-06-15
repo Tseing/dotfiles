@@ -58,7 +58,9 @@
   (("\\.fs\\'" . fsharp-ts-mode)
    ("\\.fsi\\'" . fsharp-ts-mode)
    ("\\.fsx\\'" . fsharp-ts-mode)
-   ("\\.fsproj\\'" . nxml-mode)))
+   ("\\.fsproj\\'" . nxml-mode))
+  :config
+  (setq fsharp-ts-indent-offset 4))
 
 (use-package web-mode
   :mode
