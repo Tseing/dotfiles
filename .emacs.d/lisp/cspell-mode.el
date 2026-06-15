@@ -4,6 +4,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'json)
 (require 'subr-x)
 
 (defgroup cspell-mode nil
@@ -12,16 +13,16 @@
   :prefix "cspell-")
 
 (defcustom cspell-executable "cspell"
-  "CSpell executable."
+  "CSpell executable used to locate the bundled CSpell libraries."
+  :type 'string)
+
+(defcustom cspell-node-executable "node"
+  "Node executable used to run the CSpell helper."
   :type 'string)
 
 (defcustom cspell-idle-delay 0.8
   "Idle delay before checking the current buffer."
   :type 'number)
-
-(defcustom cspell-extra-args nil
-  "Extra arguments passed to `cspell lint'."
-  :type '(repeat string))
 
 (defcustom cspell-config nil
   "Optional path to cspell config file.
@@ -53,12 +54,6 @@ Nil means enable in all buffers except excluded modes."
   "Major modes where `global-cspell-mode' should not enable `cspell-mode'."
   :type '(repeat symbol))
 
-(defcustom cspell-ignore-regexps
-  '("\\`[[:space:][:punct:]]+\\'"
-    "\\`[0-9[:punct:]]+\\'")
-  "Regexps for words which should not be highlighted."
-  :type '(repeat regexp))
-
 (defface cspell-error-face
   '((t (:underline (:style wave :color "YellowGreen"))))
   "Face used for misspelled words.")
@@ -69,30 +64,33 @@ Nil means enable in all buffers except excluded modes."
 (defvar-local cspell--overlays nil)
 (defvar-local cspell--ignored-words nil)
 
-(defconst cspell--line-re
-  "^.*?:\\([0-9]+\\):\\([0-9]+\\) - \\(Unknown word\\|Forbidden word\\) (\\([^)\n]+\\))\\(?:.*fix: (\\([^)\n]+\\))\\)?"
-  "Regexp matching common CSpell issue output.")
-
 (defvar cspell-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "M-$") #'cspell-correct)
-    (define-key map (kbd "M-n") #'cspell-next-error)
-    (define-key map (kbd "M-p") #'cspell-previous-error)
+    (define-key map (kbd "M-n") #'cspell-next)
+    (define-key map (kbd "M-p") #'cspell-previous)
     (define-key map (kbd "C-c $ b") #'cspell-check-buffer)
     (define-key map (kbd "C-c $ i") #'cspell-ignore-word-at-point)
     map)
   "Keymap for `cspell-mode'.")
 
+(defconst cspell--directory
+  (file-name-directory
+   (or load-file-name
+       buffer-file-name))
+  "Directory where cspell-mode.el is located.")
+
 (defun cspell--project-root ()
   "Return root directory for CSpell."
   (file-name-as-directory
-   (or cspell-root
-       (when-let* ((project (and (fboundp 'project-current)
-                                 (project-current nil))))
-         (if (fboundp 'project-root)
-             (project-root project)
-           (car (project-roots project))))
-       default-directory)))
+   (expand-file-name
+    (or cspell-root
+        (when-let* ((project (and (fboundp 'project-current)
+                                  (project-current nil))))
+          (if (fboundp 'project-root)
+              (project-root project)
+            (car (project-roots project))))
+        default-directory))))
 
 (defun cspell--buffer-file-name ()
   "Return a plausible file name for CSpell."
@@ -104,20 +102,27 @@ Nil means enable in all buffers except excluded modes."
                    "txt"))
        (cspell--project-root))))
 
-(defun cspell--command (stdin-path)
-  "Build CSpell command for STDIN-PATH."
-  (append
-   (list cspell-executable
-         "lint"
-         "--no-color"
-         "--no-progress"
-         "--no-summary"
-         "--no-exit-code"
-         "--show-suggestions")
-   (when cspell-config
-     (list "--config" (expand-file-name cspell-config)))
-   cspell-extra-args
-   (list (concat "stdin://" stdin-path))))
+(defun cspell--helper-script ()
+  "Return the helper script path."
+  (expand-file-name "cspell-mode-helper.mjs" cspell--directory))
+
+(defun cspell--cspell-command ()
+  "Return the resolved CSpell executable path."
+  (or (executable-find cspell-executable)
+      (and (file-executable-p cspell-executable)
+           cspell-executable)))
+
+(defun cspell--request-data ()
+  "Build the JSON request for the helper."
+  (json-encode
+   `((cspellCommand . ,(cspell--cspell-command))
+     (uri . ,(cspell--buffer-file-name))
+     (text . ,(buffer-substring-no-properties (point-min) (point-max)))
+     (languageId . ,(symbol-name major-mode))
+     (locale . nil)
+     (configFile . ,(when cspell-config
+                      (expand-file-name cspell-config)))
+     (root . ,(cspell--project-root)))))
 
 (defun cspell--delete-overlays (&optional beg end)
   "Delete CSpell overlays between BEG and END."
@@ -133,18 +138,18 @@ Nil means enable in all buffers except excluded modes."
 
 (defun cspell--ignored-word-p (word)
   "Return non-nil if WORD should be ignored."
-  (or (member-ignore-case word cspell--ignored-words)
-      (cl-some (lambda (re) (string-match-p re word))
-               cspell-ignore-regexps)))
+  (member-ignore-case word cspell--ignored-words))
 
-(defun cspell--line-column-to-point (base line column)
-  "Return buffer position from BASE-relative LINE and COLUMN.
-LINE and COLUMN are one-based as reported by CSpell."
-  (save-excursion
-    (goto-char base)
-    (forward-line (1- line))
-    (move-to-column (max 0 (1- column)))
-    (point)))
+(defun cspell--utf16-offset-to-point (offset)
+  "Return the buffer position for UTF-16 OFFSET."
+  (let ((units 0)
+        (pos (point-min)))
+    (while (and (< units offset)
+                (< pos (point-max)))
+      (let ((char (char-after pos)))
+        (setq units (+ units (if (and char (> char #xffff)) 2 1)))
+        (setq pos (1+ pos))))
+    pos))
 
 (defun cspell--hint-string (word issue suggestions)
   "Build point-local hint text for WORD, ISSUE and SUGGESTIONS."
@@ -167,78 +172,93 @@ LINE and COLUMN are one-based as reported by CSpell."
       (push ov cspell--overlays)
       ov)))
 
-(defun cspell--parse-suggestions (raw)
-  "Parse CSpell suggestion RAW string."
-  (when (and raw (not (string-empty-p raw)))
-    (mapcar #'string-trim (split-string raw "," t "[[:space:]\n]*"))))
+(defun cspell--apply-issues (issues)
+  "Apply helper ISSUES to the current buffer."
+  (cspell--delete-overlays)
+  (dolist (issue issues)
+    (let* ((word (plist-get issue :text))
+           (offset (plist-get issue :offset))
+           (length (plist-get issue :length))
+           (issue-type (plist-get issue :issueType))
+           (suggestions (plist-get issue :suggestions))
+           (beg (cspell--utf16-offset-to-point offset))
+           (end (cspell--utf16-offset-to-point (+ offset length))))
+      (when (< beg end)
+        (cspell--make-overlay beg end word issue-type suggestions)))))
 
-(defun cspell--apply-output (output base limit)
-  "Parse CSpell OUTPUT and add overlays relative to BASE up to LIMIT."
-  (cspell--delete-overlays base limit)
-  (dolist (line (split-string output "\n" t))
-    (when (string-match cspell--line-re line)
-      (let* ((ln (string-to-number (match-string 1 line)))
-             (col (string-to-number (match-string 2 line)))
-             (issue (match-string 3 line))
-             (word (match-string 4 line))
-             (suggestions (cspell--parse-suggestions (match-string 5 line)))
-             (beg (cspell--line-column-to-point base ln col))
-             (line-end (save-excursion
-                         (goto-char beg)
-                         (line-end-position)))
-             ;; Prefer exact search on the reported line.  This survives
-             ;; small column differences caused by unicode width/byte issues.
-             (real-beg (save-excursion
-                         (goto-char beg)
-                         (if (search-forward word line-end t)
-                             (match-beginning 0)
-                           beg)))
-             (end (min limit (+ real-beg (length word)))))
-        (when (< real-beg end)
-          (cspell--make-overlay real-beg end word issue suggestions))))))
+(defun cspell--parse-helper-output (output)
+  "Parse helper OUTPUT into a plist."
+  (json-parse-string output :object-type 'plist :array-type 'list))
 
-(defun cspell--sentinel (buffer check-id base limit output-buffer proc _event)
+(defun cspell--sentinel (buffer check-id output-buffer error-buffer proc _event)
   "Process sentinel for CSpell."
   (when (memq (process-status proc) '(exit signal))
     (let ((output
            (when (buffer-live-p output-buffer)
              (with-current-buffer output-buffer
+               (buffer-string))))
+          (errors
+           (when (buffer-live-p error-buffer)
+             (with-current-buffer error-buffer
                (buffer-string)))))
       (when (buffer-live-p output-buffer)
         (kill-buffer output-buffer))
+      (when (buffer-live-p error-buffer)
+        (kill-buffer error-buffer))
       (when (and output
                  (buffer-live-p buffer))
         (with-current-buffer buffer
           (when (and cspell-mode
                      (= check-id cspell--check-id))
-            (save-excursion
-              (cspell--apply-output output base limit))))))))
+            (condition-case err
+                (let* ((response (cspell--parse-helper-output output))
+                       (issues (plist-get response :issues))
+                       (runtime-errors (plist-get response :errors)))
+                  (save-excursion
+                    (cspell--apply-issues issues))
+                  (when runtime-errors
+                    (message "CSpell helper reported issues: %s"
+                             (string-join runtime-errors "; "))))
+              (error
+               (message "CSpell helper parse failed: %s%s"
+                        (error-message-string err)
+                        (if (and errors (not (string-empty-p errors)))
+                            (format " (%s)" (string-trim errors))
+                          "")))))))
+      (when (and (not output)
+                 errors
+                 (buffer-live-p buffer))
+        (with-current-buffer buffer
+          (message "CSpell helper failed: %s" (string-trim errors)))))))
 
-(defun cspell--start-check (beg end)
-  "Start async CSpell check between BEG and END."
+(defun cspell--start-check (_beg _end)
+  "Start an async whole-buffer CSpell check."
   (when (and cspell-mode
-             (executable-find cspell-executable)
-             (< beg end))
+             (cspell--cspell-command)
+             (executable-find cspell-node-executable)
+             (< (point-min) (point-max)))
     (when (process-live-p cspell--process)
       (delete-process cspell--process))
     (cl-incf cspell--check-id)
     (let* ((check-id cspell--check-id)
            (buffer (current-buffer))
-           (stdin-path (cspell--buffer-file-name))
            (default-directory (cspell--project-root))
-           (text (buffer-substring-no-properties beg end))
+           (request (cspell--request-data))
            (outbuf (generate-new-buffer " *cspell-output*"))
+           (errbuf (generate-new-buffer " *cspell-error*"))
            (proc (make-process
                   :name "cspell"
                   :buffer outbuf
-                  :command (cspell--command stdin-path)
+                  :command (list cspell-node-executable
+                                 (cspell--helper-script))
                   :connection-type 'pipe
                   :noquery t
                   :sentinel
                   (lambda (proc event)
-                    (cspell--sentinel buffer check-id beg end outbuf proc event)))))
+                    (cspell--sentinel buffer check-id outbuf errbuf proc event))
+                  :stderr errbuf)))
       (setq cspell--process proc)
-      (process-send-string proc text)
+      (process-send-string proc request)
       (process-send-eof proc))))
 
 (defun cspell--schedule ()
@@ -267,25 +287,28 @@ LINE and COLUMN are one-based as reported by CSpell."
   (cspell--schedule))
 
 (defun cspell-debug-buffer ()
-  "Run CSpell on current buffer and show raw output."
+  "Run the CSpell helper on current buffer and show raw output."
   (interactive)
-  (let* ((stdin-path (cspell--buffer-file-name))
-         (default-directory (cspell--project-root))
+  (let* ((default-directory (cspell--project-root))
          (buf (get-buffer-create "*cspell-debug*"))
-         (cmd (cspell--command stdin-path)))
+         (cmd (list cspell-node-executable
+                    (cspell--helper-script)))
+         (request (cspell--request-data)))
     (with-current-buffer buf
       (erase-buffer)
       (insert (format "Directory: %s\nCommand: %S\n\n"
                       default-directory cmd)))
-    (let ((exit-code
-           (apply #'call-process-region
-                  (point-min) (point-max)
-                  (car cmd)
-                  nil buf nil
-                  (cdr cmd))))
-      (pop-to-buffer buf)
-      (goto-char (point-min))
-      (message "cspell exited with %s" exit-code))))
+    (with-temp-buffer
+      (insert request)
+      (let ((exit-code
+             (apply #'call-process-region
+                    (point-min) (point-max)
+                    (car cmd)
+                    nil buf nil
+                    (cdr cmd))))
+        (pop-to-buffer buf)
+        (goto-char (point-min))
+        (message "cspell helper exited with %s" exit-code)))))
 
 ;;;###autoload
 (defun cspell-check-buffer ()
@@ -328,7 +351,7 @@ If BACKWARD is non-nil, search backward."
           (car ovs)))))
 
 ;;;###autoload
-(defun cspell-next-error ()
+(defun cspell-next ()
   "Jump to next CSpell error."
   (interactive)
   (if-let* ((ov (cspell--next-overlay nil)))
@@ -336,7 +359,7 @@ If BACKWARD is non-nil, search backward."
     (message "No CSpell errors")))
 
 ;;;###autoload
-(defun cspell-previous-error ()
+(defun cspell-previous ()
   "Jump to previous CSpell error."
   (interactive)
   (if-let* ((ov (cspell--next-overlay t)))
@@ -357,7 +380,7 @@ If BACKWARD is non-nil, search backward."
   "Correct misspelling at point or the next misspelling."
   (interactive)
   (unless (cspell--overlay-at-point)
-    (cspell-next-error))
+    (cspell-next))
   (if-let* ((ov (cspell--overlay-at-point)))
       (let* ((word (overlay-get ov 'cspell-word))
              (suggestions (overlay-get ov 'cspell-suggestions))
@@ -404,6 +427,8 @@ If BACKWARD is non-nil, search backward."
       (progn
         (unless (executable-find cspell-executable)
           (message "Cannot find CSpell executable: %s" cspell-executable))
+        (unless (executable-find cspell-node-executable)
+          (message "Cannot find Node executable: %s" cspell-node-executable))
         (add-hook 'after-change-functions #'cspell--after-change nil t)
         (add-hook 'eldoc-documentation-functions #'cspell-eldoc-function nil t)
         (cspell--schedule))

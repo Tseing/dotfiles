@@ -16,3 +16,5 @@
 !langserver/**
 !multiserver/
 !multiserver/**
+
+!cspell-mode-helper.mjs

@@ -278,16 +278,13 @@
   :load-path "cspell-mode.el"
   :commands (cspell-mode global-cspell-mode cspell-correct)
   :hook ((text-mode prog-mode conf-mode) . cspell-mode)
-  :bind (:map cspell-mode-map
-              ("M-$" . cspell-correct)
-              ("M-n" . cspell-next-error)
-              ("M-p" . cspell-previous-error))
-  :custom
-  (cspell-executable "cspell")
-  (cspell-idle-delay 0.8)
-  ;; 例如你想固定用项目配置：
-  ;; (cspell-config "~/repo/cspell.json")
-  )
+  :config
+  (with-eval-after-load 'evil
+    (define-key evil-normal-state-map (kbd "]s") #'cspell-next)
+    (define-key evil-normal-state-map (kbd "[s") #'cspell-previous)
+    (define-key evil-normal-state-map (kbd "z=") #'cspell-correct)
+    ))
+
 
 (provide 'init-packages)
 
