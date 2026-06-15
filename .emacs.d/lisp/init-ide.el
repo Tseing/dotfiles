@@ -340,17 +340,17 @@
     (define-key evil-normal-state-map (kbd "M-k") #'lsp-bridge-popup-documentation-scroll-down)))
 
 (with-eval-after-load 'acm
-  (define-key acm-mode-map (kbd "<tab>") #'acm-complete)
-  (define-key acm-mode-map (kbd "TAB") #'acm-complete)
-  (define-key acm-mode-map (kbd "<return>") #'acm-complete)
-  (define-key acm-mode-map (kbd "RET") #'acm-complete)
-
-  (define-key acm-mode-map (kbd "C-g") #'acm-hide)
-
-  (define-key acm-mode-map (kbd "C-j") #'acm-select-next)
-  (define-key acm-mode-map (kbd "C-k") #'acm-select-prev)
-  (define-key acm-mode-map (kbd "M-j") #'acm-doc-scroll-up)
-  (define-key acm-mode-map (kbd "M-k") #'acm-doc-scroll-down))
+  (with-eval-after-load 'evil
+    (evil-define-key 'insert acm-mode-map
+      (kbd "C-j") #'acm-select-next
+      (kbd "C-k") #'acm-select-prev
+      (kbd "C-g") #'acm-hide
+      (kbd "<tab>") #'acm-complete
+      (kbd "TAB") #'acm-complete
+      (kbd "<return>") #'acm-complete
+      (kbd "RET") #'acm-complete
+      (kbd "M-j") #'acm-doc-scroll-up
+      (kbd "M-k") #'acm-doc-scroll-down)))
 
 (use-package apheleia
   :commands apheleia-format-buffer

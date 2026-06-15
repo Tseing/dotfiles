@@ -181,25 +181,25 @@
         company-begin-commands '(self-insert-command))
   (push '(company-semantic :with company-yasnippet) company-backends))
 
-(use-package jinx
-  :defer 2
-  :hook (emacs-startup . global-jinx-mode)
-  :config
-  (setf (alist-get 'prog-mode jinx-include-faces)
-        '(font-lock-comment-face
-          font-lock-doc-face
-          font-lock-string-face
-          font-lock-function-name-face
-          font-lock-variable-name-face
-          font-lock-type-face))
-  ;; exclude Chinese
-  (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
+;; (use-package jinx
+;;   :defer 2
+;;   :hook (emacs-startup . global-jinx-mode)
+;;   :config
+;;   (setf (alist-get 'prog-mode jinx-include-faces)
+;;         '(font-lock-comment-face
+;;           font-lock-doc-face
+;;           font-lock-string-face
+;;           font-lock-function-name-face
+;;           font-lock-variable-name-face
+;;           font-lock-type-face))
+;;   ;; exclude Chinese
+;;   (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
 
-  (with-eval-after-load 'evil
-    (define-key evil-normal-state-map (kbd "]s") #'jinx-next)
-    (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
-    (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
-    ))
+;;   (with-eval-after-load 'evil
+;;     (define-key evil-normal-state-map (kbd "]s") #'jinx-next)
+;;     (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
+;;     (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
+;;     ))
 
 (use-package paredit
   :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
@@ -272,6 +272,22 @@
   :config (which-key-mode))
 
 (use-package restart-emacs)
+
+(use-package cspell-mode
+  :straight nil
+  :load-path "cspell-mode.el"
+  :commands (cspell-mode global-cspell-mode cspell-correct)
+  :hook ((text-mode prog-mode conf-mode) . cspell-mode)
+  :bind (:map cspell-mode-map
+              ("M-$" . cspell-correct)
+              ("M-n" . cspell-next-error)
+              ("M-p" . cspell-previous-error))
+  :custom
+  (cspell-executable "cspell")
+  (cspell-idle-delay 0.8)
+  ;; 例如你想固定用项目配置：
+  ;; (cspell-config "~/repo/cspell.json")
+  )
 
 (provide 'init-packages)
 
