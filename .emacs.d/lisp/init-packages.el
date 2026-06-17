@@ -200,44 +200,48 @@
 ;;     (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
 ;;     (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
 ;;     ))
+(defconst my/lisp-like-modes
+  '(emacs-lisp-mode lisp-mode lisp-interaction-mode
+                    scheme-mode clojure-mode racket-mode
+                    ielm-mode inferior-emacs-lisp-mode))
+
+(defun my/lisp-like-mode-p ()
+  (apply #'derived-mode-p my/lisp-like-modes))
 
 (use-package paredit
-  :hook ((prog-mode inferior-emacs-lisp-mode) . paredit-mode)
+  :hook ((emacs-lisp-mode
+          lisp-mode
+          lisp-interaction-mode
+          scheme-mode
+          clojure-mode
+          racket-mode
+          ielm-mode
+          inferior-emacs-lisp-mode)
+         . paredit-mode))
+
+(use-package smartparens
+  :hook (prog-mode . my/enable-smartparens-for-non-lisp)
   :config
-  (define-key paredit-mode-map (kbd "{") #'paredit-open-curly)
-  (define-key paredit-mode-map (kbd "}") #'paredit-close-curly)
+  (require 'smartparens-config)
 
-  (defconst my/lisp-like-modes
-    '(emacs-lisp-mode lisp-mode lisp-interaction-mode
-                      scheme-mode clojure-mode ielm-mode inferior-emacs-lisp-mode))
-
-  (defun my/lisp-like-mode-p ()
-    (apply #'derived-mode-p my/lisp-like-modes))
-
-  (defun my/paredit-space-for-delimiter-p (_endp _delimiter)
-    (my/lisp-like-mode-p))
-
-  (setq paredit-space-for-delimiter-predicates
-        '(my/paredit-space-for-delimiter-p))
-
-  (defun my/paredit-keys-for-non-lisp ()
+  (defun my/enable-smartparens-for-non-lisp ()
     (unless (my/lisp-like-mode-p)
-      (let ((map (copy-keymap paredit-mode-map)))
-        ;; Remove paredit bindings from the copied map.
-        ;; Then Emacs falls through to major-mode/global bindings.
-        (define-key map (kbd "RET") nil)
-        (define-key map (kbd "C-m") nil)
-        (define-key map (kbd "DEL") nil)
-        (define-key map (kbd "<backspace>") nil)
-        (define-key map (kbd "C-j") nil)
+      (smartparens-mode 1)))
 
-        (setq-local minor-mode-overriding-map-alist
-                    (assq-delete-all 'paredit-mode
-                                     minor-mode-overriding-map-alist))
-        (push `(paredit-mode . ,map)
-              minor-mode-overriding-map-alist))))
+  (define-key smartparens-mode-map (kbd "C-M-f") #'sp-forward-sexp)
+  (define-key smartparens-mode-map (kbd "C-M-b") #'sp-backward-sexp)
+  (define-key smartparens-mode-map (kbd "C-M-u") #'sp-backward-up-sexp)
+  (define-key smartparens-mode-map (kbd "C-M-d") #'sp-down-sexp)
 
-  (add-hook 'paredit-mode-hook #'my/paredit-keys-for-non-lisp))
+  (define-key smartparens-mode-map (kbd "C-<right>") #'sp-forward-slurp-sexp)
+  (define-key smartparens-mode-map (kbd "C-<left>")  #'sp-forward-barf-sexp)
+  (define-key smartparens-mode-map (kbd "C-M-<right>") #'sp-backward-slurp-sexp)
+  (define-key smartparens-mode-map (kbd "C-M-<left>")  #'sp-backward-barf-sexp)
+
+  (define-key smartparens-mode-map (kbd "M-(") #'sp-wrap-round)
+  (define-key smartparens-mode-map (kbd "M-[") #'sp-wrap-square)
+  (define-key smartparens-mode-map (kbd "M-{") #'sp-wrap-curly)
+  (define-key smartparens-mode-map (kbd "M-\"") #'sp-wrap-doublequote))
 
 (use-package treesit-fold
   :straight (treesit-fold :type git
