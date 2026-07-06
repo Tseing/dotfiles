@@ -67,9 +67,12 @@
    ("C-c d" . hungry-delete-forward)))
 
 (use-package drag-stuff
-  :bind
-  (("<M-up>" . drag-stuff-up)
-   ("<M-down>" . drag-stuff-down)))
+  :after evil
+  :commands (drag-stuff-up drag-stuff-down)
+  :init
+  (with-eval-after-load 'evil
+    (evil-global-set-key 'visual (kbd "M-j") #'drag-stuff-down)
+    (evil-global-set-key 'visual (kbd "M-k") #'drag-stuff-up)))
 
 (use-package ibuffer
   :straight nil
@@ -277,17 +280,17 @@
 
 (use-package restart-emacs)
 
-(use-package cspell-mode
-  :straight nil
-  :load-path "cspell-mode.el"
-  :commands (cspell-mode global-cspell-mode cspell-correct)
-  :hook ((text-mode prog-mode conf-mode) . cspell-mode)
-  :config
-  (with-eval-after-load 'evil
-    (evil-define-key 'normal cspell-mode-map
-      (kbd "]s") #'cspell-next
-      (kbd "[s") #'cspell-previous
-      (kbd "z=") #'cspell-correct)))
+;; (use-package cspell-mode
+;;   :straight nil
+;;   :load-path "cspell-mode.el"
+;;   :commands (cspell-mode global-cspell-mode cspell-correct)
+;;   :hook ((text-mode prog-mode conf-mode) . cspell-mode)
+;;   :config
+;;   (with-eval-after-load 'evil
+;;     (evil-define-key 'normal cspell-mode-map
+;;       (kbd "]s") #'cspell-next
+;;       (kbd "[s") #'cspell-previous
+;;       (kbd "z=") #'cspell-correct)))
 
 
 (provide 'init-packages)

@@ -5,10 +5,10 @@
   "completion_item_resolve": ["typescriptreact", "tailwindreact"],
 
   "diagnostics": ["typescriptreact", "vscode-eslint-language-server", "tailwindreact"],
-  "code_action": ["typescriptreact", "vscode-eslint-language-server", "tailwindreact"],
-  "execute_command": ["typescriptreact", "vscode-eslint-language-server", "tailwindreact"],
+  "code_action": ["typescriptreact", "vscode-eslint-language-server"],
+  "execute_command": ["typescriptreact", "vscode-eslint-language-server"],
 
-  "hover": ["typescriptreact", "tailwindreact"],
+  "hover": "typescriptreact",
 
   "find_define": "typescriptreact",
   "find_type_define": "typescriptreact",

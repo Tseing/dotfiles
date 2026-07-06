@@ -14,7 +14,7 @@
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
           (vue "https://github.com/ikatyang/tree-sitter-vue")
-          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")
+          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml" "v0.7.0" "src")
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (qmljs "https://github.com/yuja/tree-sitter-qmljs"))
         treesit-font-lock-level 4))
@@ -116,8 +116,9 @@
 (use-package qml-ts-mode
   :straight (:type git :host github :repo "xhcoding/qml-ts-mode")
   :mode "\\.qml\\'"
-  :init
-  (setq qml-ts-mode-indent-offset 2))
+  ;; :init
+  ;; (setq qml-ts-mode-indent-offset 2)
+  )
 
 (use-package yasnippet
   :config
