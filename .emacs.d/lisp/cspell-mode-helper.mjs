@@ -66,6 +66,7 @@ async function handleRequest(request) {
     cspellCommand,
     uri,
     text,
+    baseOffset = 0,
     languageId,
     locale,
     configFile,
@@ -99,7 +100,11 @@ async function handleRequest(request) {
 
   return {
     requestId,
-    issues: (result.issues || []).map(normalizeIssue),
+    issues: (result.issues || []).map((issue) => {
+      const normalized = normalizeIssue(issue);
+      normalized.offset += baseOffset;
+      return normalized;
+    }),
     checked: Boolean(result.checked),
     errors: (result.errors || []).map((error) => error.message || String(error)),
   };
@@ -107,6 +112,16 @@ async function handleRequest(request) {
 
 function writeResponse(response) {
   process.stdout.write(`${JSON.stringify(response)}\n`);
+}
+
+function writeCanceledResponse(requestId) {
+  writeResponse({
+    requestId,
+    canceled: true,
+    issues: [],
+    checked: false,
+    errors: [],
+  });
 }
 
 async function runOnce() {
@@ -121,30 +136,110 @@ async function runOnce() {
 }
 
 async function runServer() {
+  const canceled = new Set();
+  const queue = [];
+  let activeRequestId = null;
+
+  function removeQueuedRequest(requestId) {
+    const index = queue.findIndex((item) => item.requestId === requestId);
+    if (index >= 0) {
+      queue.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  function replaceQueuedRequest(request) {
+    const index = queue.findIndex((item) => item.uri === request.uri);
+    if (index >= 0) {
+      const old = queue[index];
+      queue[index] = request;
+      writeCanceledResponse(old.requestId);
+      return true;
+    }
+    return false;
+  }
+
+  async function pumpQueue() {
+    if (activeRequestId !== null || queue.length === 0) {
+      return;
+    }
+
+    const request = queue.shift();
+    activeRequestId = request.requestId;
+
+    try {
+      const response = await handleRequest(request);
+      if (canceled.delete(request.requestId)) {
+        writeCanceledResponse(request.requestId);
+      } else {
+        writeResponse(response);
+      }
+    } catch (error) {
+      if (canceled.delete(request.requestId)) {
+        writeCanceledResponse(request.requestId);
+      } else {
+        writeResponse({
+          requestId: request?.requestId ?? null,
+          issues: [],
+          checked: false,
+          errors: [error.message || String(error)],
+        });
+      }
+    } finally {
+      activeRequestId = null;
+      void pumpQueue();
+    }
+  }
+
   const rl = readline.createInterface({
     input: process.stdin,
     crlfDelay: Infinity,
   });
 
-  for await (const line of rl) {
+  rl.on("line", (line) => {
     if (!line.trim()) {
-      continue;
+      return;
     }
 
-    let request;
+    let message;
 
     try {
-      request = JSON.parse(line);
-      writeResponse(await handleRequest(request));
+      message = JSON.parse(line);
     } catch (error) {
       writeResponse({
-        requestId: request?.requestId ?? null,
+        requestId: null,
         issues: [],
         checked: false,
         errors: [error.message || String(error)],
       });
+      return;
     }
-  }
+
+    if (message.type === "cancel") {
+      const { requestId } = message;
+      if (removeQueuedRequest(requestId)) {
+        writeCanceledResponse(requestId);
+        return;
+      }
+      if (activeRequestId === requestId) {
+        canceled.add(requestId);
+      }
+      return;
+    }
+
+    if (canceled.delete(message.requestId)) {
+      writeCanceledResponse(message.requestId);
+      return;
+    }
+
+    if (!replaceQueuedRequest(message)) {
+      queue.push(message);
+    }
+    void pumpQueue();
+  });
+
+  await new Promise((resolve) => rl.once("close", resolve));
 }
 
 async function main() {

@@ -280,17 +280,17 @@
 
 (use-package restart-emacs)
 
-;; (use-package cspell-mode
-;;   :straight nil
-;;   :load-path "cspell-mode.el"
-;;   :commands (cspell-mode global-cspell-mode cspell-correct)
-;;   :hook ((text-mode prog-mode conf-mode) . cspell-mode)
-;;   :config
-;;   (with-eval-after-load 'evil
-;;     (evil-define-key 'normal cspell-mode-map
-;;       (kbd "]s") #'cspell-next
-;;       (kbd "[s") #'cspell-previous
-;;       (kbd "z=") #'cspell-correct)))
+(use-package cspell-mode
+  :straight nil
+  :load-path "cspell-mode.el"
+  :commands (cspell-mode global-cspell-mode cspell-correct)
+  :hook ((text-mode prog-mode conf-mode) . cspell-mode)
+  :config
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal cspell-mode-map
+      (kbd "]s") #'cspell-next
+      (kbd "[s") #'cspell-previous
+      (kbd "z=") #'cspell-correct)))
 
 
 (provide 'init-packages)

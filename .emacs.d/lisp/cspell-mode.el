@@ -24,6 +24,12 @@
   "Idle delay before checking the current buffer."
   :type 'number)
 
+(defcustom cspell-large-file-threshold 50000
+  "Use visible-region checking when the buffer exceeds this size.
+The value is measured in characters. Nil disables the guard."
+  :type '(choice (const :tag "Disabled" nil)
+                 integer))
+
 (defcustom cspell-config nil
   "Optional path to cspell config file.
 When nil, CSpell searches configuration from the current file/project."
@@ -61,6 +67,7 @@ Nil means enable in all buffers except excluded modes."
 (defvar-local cspell--timer nil)
 (defvar-local cspell--check-id 0)
 (defvar-local cspell--request-id nil)
+(defvar-local cspell--request-region nil)
 (defvar-local cspell--overlays nil)
 (defvar-local cspell--ignored-words nil)
 
@@ -117,8 +124,47 @@ Nil means enable in all buffers except excluded modes."
       (and (file-executable-p cspell-executable)
            cspell-executable)))
 
-(defun cspell--make-request ()
-  "Return `(REQUEST-ID . JSON-PAYLOAD)' for the helper."
+(defun cspell--point-to-utf16-offset (pos)
+  "Return the UTF-16 offset from `point-min' to POS."
+  (let ((units 0))
+    (save-excursion
+      (goto-char (point-min))
+      (while (< (point) pos)
+        (let ((char (char-after)))
+          (setq units (+ units (if (and char (> char #xffff)) 2 1)))
+          (forward-char 1))))
+    units))
+
+(defun cspell--visible-region ()
+  "Return the visible region for the current buffer."
+  (let ((windows (get-buffer-window-list (current-buffer) nil t)))
+    (if (not windows)
+        (cons (point-min) (point-max))
+      (let ((beg (apply #'min (mapcar #'window-start windows)))
+            (end (apply #'max (mapcar #'window-end windows))))
+        (save-excursion
+          (goto-char beg)
+          (setq beg (line-beginning-position))
+          (goto-char end)
+          (setq end (line-end-position)))
+        (cons beg end)))))
+
+(defun cspell--check-region ()
+  "Return the region to check for automatic refresh."
+  (if (and cspell-large-file-threshold
+           (> (buffer-size) cspell-large-file-threshold))
+      (cspell--visible-region)
+    (cons (point-min) (point-max))))
+
+(defun cspell--post-command ()
+  "Schedule a check after point or window movement changes the target region."
+  (when cspell-mode
+    (let ((region (cspell--check-region)))
+      (unless (equal region cspell--request-region)
+        (cspell--schedule)))))
+
+(defun cspell--make-request (beg end)
+  "Return `(REQUEST-ID . JSON-PAYLOAD)' for region BEG END."
   (let ((request-id (cl-incf cspell--request-seq)))
     (cons
      request-id
@@ -126,7 +172,8 @@ Nil means enable in all buffers except excluded modes."
       `((requestId . ,request-id)
         (cspellCommand . ,(cspell--cspell-command))
         (uri . ,(cspell--buffer-file-name))
-        (text . ,(buffer-substring-no-properties (point-min) (point-max)))
+        (text . ,(buffer-substring-no-properties beg end))
+        (baseOffset . ,(cspell--point-to-utf16-offset beg))
         (languageId . ,(symbol-name major-mode))
         (locale . nil)
         (configFile . ,(when cspell-config
@@ -181,9 +228,9 @@ Nil means enable in all buffers except excluded modes."
       (push ov cspell--overlays)
       ov)))
 
-(defun cspell--apply-issues (issues)
-  "Apply helper ISSUES to the current buffer."
-  (cspell--delete-overlays)
+(defun cspell--apply-issues (issues beg end)
+  "Apply helper ISSUES to the current buffer between BEG and END."
+  (cspell--delete-overlays beg end)
   (dolist (issue issues)
     (let* ((word (plist-get issue :text))
            (offset (plist-get issue :offset))
@@ -199,6 +246,16 @@ Nil means enable in all buffers except excluded modes."
   "Parse helper OUTPUT into a plist."
   (json-parse-string output :object-type 'plist :array-type 'list))
 
+(defun cspell--send-cancel (request-id)
+  "Send a cancel message for REQUEST-ID."
+  (when (and request-id
+             (process-live-p cspell--session-process))
+    (process-send-string
+     cspell--session-process
+     (concat (json-encode `((type . "cancel")
+                            (requestId . ,request-id)))
+             "\n"))))
+
 (defun cspell--stderr-string ()
   "Return helper stderr output."
   (when (buffer-live-p cspell--session-stderr-buffer)
@@ -208,24 +265,27 @@ Nil means enable in all buffers except excluded modes."
 (defun cspell--handle-response (response)
   "Handle helper RESPONSE."
   (let* ((request-id (plist-get response :requestId))
+         (canceled (plist-get response :canceled))
          (runtime-errors (plist-get response :errors))
          (pending (and request-id
                        (gethash request-id cspell--pending-requests))))
     (when request-id
       (remhash request-id cspell--pending-requests))
-    (if (not pending)
+    (if (or canceled (not pending))
         (when runtime-errors
           (message "CSpell helper reported issues: %s"
                    (string-join runtime-errors "; ")))
       (let ((buffer (plist-get pending :buffer))
-            (check-id (plist-get pending :check-id)))
+            (check-id (plist-get pending :check-id))
+            (beg (plist-get pending :beg))
+            (end (plist-get pending :end)))
         (when (buffer-live-p buffer)
           (with-current-buffer buffer
             (when (and cspell-mode
                        (= check-id cspell--check-id)
                        (equal request-id cspell--request-id))
               (save-excursion
-                (cspell--apply-issues (plist-get response :issues)))
+                (cspell--apply-issues (plist-get response :issues) beg end))
               (when runtime-errors
                 (message "CSpell helper reported issues: %s"
                          (string-join runtime-errors "; "))))))))))
@@ -280,28 +340,32 @@ Nil means enable in all buffers except excluded modes."
            :stderr cspell--session-stderr-buffer)))
   cspell--session-process)
 
-(defun cspell--start-check (_beg _end)
-  "Start an async whole-buffer CSpell check."
+(defun cspell--start-check (beg end)
+  "Start an async CSpell check for region BEG END."
   (when (and cspell-mode
              (cspell--cspell-command)
              (executable-find cspell-node-executable)
-             (< (point-min) (point-max)))
+             (< beg end))
     (cl-incf cspell--check-id)
     (let* ((buffer (current-buffer))
            (default-directory (cspell--project-root))
-           (request (cspell--make-request))
+           (request (cspell--make-request beg end))
            (request-id (car request))
            (payload (cdr request))
            (proc (cspell--ensure-session)))
+      (cspell--send-cancel cspell--request-id)
       (setq cspell--request-id request-id)
+      (setq cspell--request-region (cons beg end))
       (puthash request-id
                (list :buffer buffer
-                     :check-id cspell--check-id)
+                     :check-id cspell--check-id
+                     :beg beg
+                     :end end)
                cspell--pending-requests)
       (process-send-string proc (concat payload "\n")))))
 
 (defun cspell--schedule ()
-  "Schedule a whole-buffer check."
+  "Schedule a guarded check."
   (when cspell--timer
     (cancel-timer cspell--timer))
   (setq cspell--timer
@@ -311,7 +375,8 @@ Nil means enable in all buffers except excluded modes."
            (when (buffer-live-p buffer)
              (with-current-buffer buffer
                (when cspell-mode
-                 (cspell-check-buffer)))))
+                 (pcase-let ((`(,beg . ,end) (cspell--check-region)))
+                   (cspell--start-check beg end))))))
          (current-buffer))))
 
 (defun cspell--after-change (beg end _len)
@@ -333,7 +398,7 @@ Nil means enable in all buffers except excluded modes."
          (cmd (list cspell-node-executable
                     (cspell--helper-script)
                     "--once"))
-         (request (cdr (cspell--make-request))))
+         (request (cdr (cspell--make-request (point-min) (point-max)))))
     (with-current-buffer buf
       (erase-buffer)
       (insert (format "Directory: %s\nCommand: %S\n\n"
@@ -470,13 +535,16 @@ If BACKWARD is non-nil, search backward."
         (unless (executable-find cspell-node-executable)
           (message "Cannot find Node executable: %s" cspell-node-executable))
         (add-hook 'after-change-functions #'cspell--after-change nil t)
+        (add-hook 'post-command-hook #'cspell--post-command nil t)
         (add-hook 'eldoc-documentation-functions #'cspell-eldoc-function nil t)
         (cspell--schedule))
     (remove-hook 'after-change-functions #'cspell--after-change t)
+    (remove-hook 'post-command-hook #'cspell--post-command t)
     (remove-hook 'eldoc-documentation-functions #'cspell-eldoc-function t)
     (when cspell--timer
       (cancel-timer cspell--timer)
       (setq cspell--timer nil))
+    (setq cspell--request-region nil)
     (cspell--delete-overlays)))
 
 ;;;###autoload
