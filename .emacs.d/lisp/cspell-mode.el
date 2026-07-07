@@ -64,6 +64,18 @@ Nil means enable in all buffers except excluded modes."
   '((t (:underline (:style wave :color "YellowGreen"))))
   "Face used for misspelled words.")
 
+(defface cspell-completion-section-face
+  '((t (:inherit shadow)))
+  "Face used for CSpell completion section headers.")
+
+(defface cspell-completion-action-face
+  '((t (:inherit font-lock-keyword-face)))
+  "Face used for special CSpell completion prefixes.")
+
+(defface cspell-completion-label-face
+  '((t (:inherit font-lock-string-face)))
+  "Face used for CSpell completion labels.")
+
 (defvar-local cspell--timer nil)
 (defvar-local cspell--check-id 0)
 (defvar-local cspell--request-id nil)
@@ -92,17 +104,31 @@ Nil means enable in all buffers except excluded modes."
        buffer-file-name))
   "Directory where cspell-mode.el is located.")
 
+(defun cspell--safe-default-directory ()
+  "Return a valid directory for file and project operations."
+  (let ((candidates
+         (delq nil
+               (list cspell-root
+                     (and buffer-file-name (file-name-directory buffer-file-name))
+                     default-directory
+                     "~/" "/"))))
+    (file-name-as-directory
+     (expand-file-name
+      (or (cl-find-if #'file-directory-p candidates)
+          "~")))))
+
 (defun cspell--project-root ()
   "Return root directory for CSpell."
-  (file-name-as-directory
-   (expand-file-name
-    (or cspell-root
-        (when-let* ((project (and (fboundp 'project-current)
-                                  (project-current nil))))
-          (if (fboundp 'project-root)
-              (project-root project)
-            (car (project-roots project))))
-        default-directory))))
+  (let ((default-directory (cspell--safe-default-directory)))
+    (file-name-as-directory
+     (expand-file-name
+      (or cspell-root
+          (when-let* ((project (and (fboundp 'project-current)
+                                    (project-current nil))))
+            (if (fboundp 'project-root)
+                (project-root project)
+              (car (project-roots project))))
+          default-directory)))))
 
 (defun cspell--buffer-file-name ()
   "Return a plausible file name for CSpell."
@@ -118,11 +144,27 @@ Nil means enable in all buffers except excluded modes."
   "Return the helper script path."
   (expand-file-name "cspell-mode-helper.mjs" cspell--directory))
 
+(defun cspell--project-words-file ()
+  "Return the project words file path."
+  (let* ((root (cspell--project-root))
+         (default-directory root)
+         (file (if cspell-config
+                   (expand-file-name cspell-config root)
+                 (expand-file-name ".cspell.json" root))))
+    (unless (string-suffix-p ".json" file t)
+      (user-error "Only JSON CSpell config files are supported for project words: %s"
+                  file))
+    file))
+
 (defun cspell--cspell-command ()
   "Return the resolved CSpell executable path."
   (or (executable-find cspell-executable)
       (and (file-executable-p cspell-executable)
            cspell-executable)))
+
+(defun cspell--string-equal-ignore-case (a b)
+  "Return non-nil if strings A and B are equal ignoring case."
+  (string-equal (downcase a) (downcase b)))
 
 (defun cspell--point-to-utf16-offset (pos)
   "Return the UTF-16 offset from `point-min' to POS."
@@ -164,21 +206,23 @@ Nil means enable in all buffers except excluded modes."
         (cspell--schedule)))))
 
 (defun cspell--make-request (beg end)
-  "Return `(REQUEST-ID . JSON-PAYLOAD)' for region BEG END."
-  (let ((request-id (cl-incf cspell--request-seq)))
-    (cons
-     request-id
-     (json-encode
-      `((requestId . ,request-id)
-        (cspellCommand . ,(cspell--cspell-command))
-        (uri . ,(cspell--buffer-file-name))
-        (text . ,(buffer-substring-no-properties beg end))
-        (baseOffset . ,(cspell--point-to-utf16-offset beg))
-        (languageId . ,(symbol-name major-mode))
-        (locale . nil)
-        (configFile . ,(when cspell-config
-                         (expand-file-name cspell-config)))
-        (root . ,(cspell--project-root)))))))
+  "Return request plist for region BEG END."
+  (let* ((request-id (cl-incf cspell--request-seq))
+         (base-offset (cspell--point-to-utf16-offset beg)))
+    (list :request-id request-id
+          :base-offset base-offset
+          :payload
+          (json-encode
+           `((requestId . ,request-id)
+             (cspellCommand . ,(cspell--cspell-command))
+             (uri . ,(cspell--buffer-file-name))
+             (text . ,(buffer-substring-no-properties beg end))
+             (baseOffset . ,base-offset)
+             (languageId . ,(symbol-name major-mode))
+             (locale . nil)
+             (configFile . ,(when cspell-config
+                              (expand-file-name cspell-config)))
+             (root . ,(cspell--project-root)))))))
 
 (defun cspell--delete-overlays (&optional beg end)
   "Delete CSpell overlays between BEG and END."
@@ -196,6 +240,66 @@ Nil means enable in all buffers except excluded modes."
   "Return non-nil if WORD should be ignored."
   (member-ignore-case word cspell--ignored-words))
 
+(defun cspell--clear-word-overlays (word)
+  "Delete all current overlays matching WORD."
+  (dolist (candidate (copy-sequence cspell--overlays))
+    (when (cspell--string-equal-ignore-case
+           word (overlay-get candidate 'cspell-word))
+      (delete-overlay candidate)
+      (setq cspell--overlays (delq candidate cspell--overlays)))))
+
+(defun cspell--ignore-word-in-buffer (word)
+  "Ignore WORD in the current buffer."
+  (cl-pushnew word cspell--ignored-words
+              :test #'cspell--string-equal-ignore-case)
+  (cspell--clear-word-overlays word))
+
+(defun cspell--config-set-string-key (config key value)
+  "Set CONFIG string KEY to VALUE and return CONFIG."
+  (let ((cell (assoc-string key config t)))
+    (if cell
+        (progn
+          (setcdr cell value)
+          config)
+      (append config (list (cons key value))))))
+
+(defun cspell--read-project-config ()
+  "Return the current project CSpell config as an alist."
+  (let ((file (cspell--project-words-file)))
+    (if (file-exists-p file)
+        (let ((default-directory (file-name-directory file)))
+          (with-temp-buffer
+            (insert-file-contents file)
+            (json-parse-buffer :object-type 'alist :array-type 'list)))
+      '(("version" . "0.2")))))
+
+(defun cspell--write-project-config (config)
+  "Write project CSpell CONFIG to `.cspell.json'."
+  (let ((file (cspell--project-words-file)))
+    (make-directory (file-name-directory file) t)
+    (let ((default-directory (file-name-directory file)))
+      (with-temp-buffer
+        (insert (json-encode config))
+        (json-pretty-print-buffer)
+        (insert "\n")
+        (write-region nil nil file nil 'silent)))))
+
+(defun cspell--project-add-word (word)
+  "Add WORD to the project CSpell dictionary."
+  (let* ((config (cspell--read-project-config))
+         (words (copy-sequence (or (cdr (assoc-string "words" config t)) '()))))
+    (unless (member-ignore-case word words)
+      (setq config
+            (cspell--config-set-string-key
+             config "words" (append words (list word))))
+      (cspell--write-project-config config))
+    (cspell--ignore-word-in-buffer word)
+    (message "CSpell added project word: %s" word)))
+
+(defun cspell--user-add-word (word)
+  "Add WORD to the user CSpell dictionary."
+  (user-error "User dictionary is not implemented yet for %s" word))
+
 (defun cspell--utf16-offset-to-point (offset)
   "Return the buffer position for UTF-16 OFFSET."
   (let ((units 0)
@@ -207,12 +311,97 @@ Nil means enable in all buffers except excluded modes."
         (setq pos (1+ pos))))
     pos))
 
+(defun cspell--resolve-issue-points (issues beg base-offset)
+  "Resolve ISSUES to buffer positions starting from region BEG.
+Return a list of `(ISSUE BEG END)' entries sorted by offset."
+  (let ((sorted (sort (copy-sequence issues)
+                      (lambda (a b)
+                        (< (plist-get a :offset)
+                           (plist-get b :offset)))))
+        (entries nil)
+        (units base-offset)
+        (pos beg))
+    (dolist (issue sorted (nreverse entries))
+      (let* ((offset (plist-get issue :offset))
+             (target-end (+ offset (plist-get issue :length)))
+             beg-pos
+             end-pos)
+        (while (and (< units offset)
+                    (< pos (point-max)))
+          (let ((char (char-after pos)))
+            (setq units (+ units (if (and char (> char #xffff)) 2 1)))
+            (setq pos (1+ pos))))
+        (setq beg-pos pos)
+        (while (and (< units target-end)
+                    (< pos (point-max)))
+          (let ((char (char-after pos)))
+            (setq units (+ units (if (and char (> char #xffff)) 2 1)))
+            (setq pos (1+ pos))))
+        (setq end-pos pos)
+        (push (list issue beg-pos end-pos) entries)))))
+
 (defun cspell--hint-string (word issue suggestions)
   "Build point-local hint text for WORD, ISSUE and SUGGESTIONS."
   (if suggestions
       (format "[CSpell] %s: %s; suggestions: %s"
               issue word (string-join suggestions ", "))
     (format "[CSpell] %s: %s" issue word )))
+
+(defun cspell--section-title (kind)
+  "Return the display title for completion section KIND."
+  (propertize
+   (pcase kind
+     ('suggestions "----- Seggestions from CSpell ---")
+     ('save "----Accept and save word ----"))
+   'face 'cspell-completion-section-face))
+
+(defun cspell--correction-kind (candidate)
+  "Return the completion kind for CANDIDATE."
+  (if (member (substring-no-properties candidate 0 1) '("@" "/"))
+      'save
+    'suggestions))
+
+(defun cspell--correction-group-function (candidate transform)
+  "Group CSpell correction CANDIDATE.
+If TRANSFORM is non-nil, return a display title."
+  (let ((kind (cspell--correction-kind candidate)))
+    (if transform
+        candidate
+      (pcase kind
+        ('suggestions "Seggestions from CSpell")
+        ('save "Accept and save word")))))
+
+(defun cspell--correction-annotation (candidate)
+  "Return the completion annotation for CANDIDATE."
+  (pcase (substring-no-properties candidate)
+    ((pred (string-prefix-p "@"))
+     (concat " "
+             (propertize "[Personal dictionary]"
+                         'face 'cspell-completion-label-face)))
+    ((pred (string-prefix-p "/"))
+     (concat " "
+             (propertize "[Project]"
+                         'face 'cspell-completion-label-face)))
+    (_ "")))
+
+(defun cspell--correction-candidate (text)
+  "Return display candidate TEXT."
+  (if (member (substring text 0 1) '("@" "/"))
+      (concat (propertize (substring text 0 1)
+                          'face 'cspell-completion-action-face)
+              (substring text 1))
+    text))
+
+(defun cspell--correction-table (choices)
+  "Return a completion table for CHOICES."
+  (lambda (string pred action)
+    (if (eq action 'metadata)
+        `(metadata
+          (annotation-function . cspell--correction-annotation)
+          (display-sort-function . identity)
+          (cycle-sort-function . identity)
+          (group-function . cspell--correction-group-function))
+      (complete-with-action action choices string pred))))
 
 (defun cspell--make-overlay (beg end word issue suggestions)
   "Create misspelling overlay from BEG to END for WORD, ISSUE and SUGGESTIONS."
@@ -228,19 +417,17 @@ Nil means enable in all buffers except excluded modes."
       (push ov cspell--overlays)
       ov)))
 
-(defun cspell--apply-issues (issues beg end)
+(defun cspell--apply-issues (issues beg end base-offset)
   "Apply helper ISSUES to the current buffer between BEG and END."
   (cspell--delete-overlays beg end)
-  (dolist (issue issues)
-    (let* ((word (plist-get issue :text))
-           (offset (plist-get issue :offset))
-           (length (plist-get issue :length))
-           (issue-type (plist-get issue :issueType))
-           (suggestions (plist-get issue :suggestions))
-           (beg (cspell--utf16-offset-to-point offset))
-           (end (cspell--utf16-offset-to-point (+ offset length))))
-      (when (< beg end)
-        (cspell--make-overlay beg end word issue-type suggestions)))))
+  (dolist (entry (cspell--resolve-issue-points issues beg base-offset))
+    (pcase-let ((`(,issue ,issue-beg ,issue-end) entry))
+      (when (< issue-beg issue-end)
+        (cspell--make-overlay issue-beg
+                              issue-end
+                              (plist-get issue :text)
+                              (plist-get issue :issueType)
+                              (plist-get issue :suggestions))))))
 
 (defun cspell--parse-helper-output (output)
   "Parse helper OUTPUT into a plist."
@@ -278,14 +465,16 @@ Nil means enable in all buffers except excluded modes."
       (let ((buffer (plist-get pending :buffer))
             (check-id (plist-get pending :check-id))
             (beg (plist-get pending :beg))
-            (end (plist-get pending :end)))
+            (end (plist-get pending :end))
+            (base-offset (plist-get pending :base-offset)))
         (when (buffer-live-p buffer)
           (with-current-buffer buffer
             (when (and cspell-mode
                        (= check-id cspell--check-id)
                        (equal request-id cspell--request-id))
               (save-excursion
-                (cspell--apply-issues (plist-get response :issues) beg end))
+                (cspell--apply-issues
+                 (plist-get response :issues) beg end base-offset))
               (when runtime-errors
                 (message "CSpell helper reported issues: %s"
                          (string-join runtime-errors "; "))))))))))
@@ -350,8 +539,9 @@ Nil means enable in all buffers except excluded modes."
     (let* ((buffer (current-buffer))
            (default-directory (cspell--project-root))
            (request (cspell--make-request beg end))
-           (request-id (car request))
-           (payload (cdr request))
+           (request-id (plist-get request :request-id))
+           (base-offset (plist-get request :base-offset))
+           (payload (plist-get request :payload))
            (proc (cspell--ensure-session)))
       (cspell--send-cancel cspell--request-id)
       (setq cspell--request-id request-id)
@@ -359,6 +549,7 @@ Nil means enable in all buffers except excluded modes."
       (puthash request-id
                (list :buffer buffer
                      :check-id cspell--check-id
+                     :base-offset base-offset
                      :beg beg
                      :end end)
                cspell--pending-requests)
@@ -398,7 +589,9 @@ Nil means enable in all buffers except excluded modes."
          (cmd (list cspell-node-executable
                     (cspell--helper-script)
                     "--once"))
-         (request (cdr (cspell--make-request (point-min) (point-max)))))
+         (request (plist-get
+                   (cspell--make-request (point-min) (point-max))
+                   :payload)))
     (with-current-buffer buf
       (erase-buffer)
       (insert (format "Directory: %s\nCommand: %S\n\n"
@@ -473,12 +666,36 @@ If BACKWARD is non-nil, search backward."
 
 (defun cspell--read-correction (word suggestions)
   "Read correction for WORD from SUGGESTIONS."
-  (let* ((prompt (format "Replace %s with: " word))
-         (choices (delete-dups (delq nil (copy-sequence suggestions))))
-         (input (completing-read prompt choices nil nil nil nil
-                                 (car choices))))
+  (let* ((prompt (format "Correct ‘%s’: " word))
+         (default (car (delq nil (copy-sequence suggestions))))
+         (choices (delete-dups
+                   (append (mapcar #'cspell--correction-candidate
+                                   (delq nil (copy-sequence suggestions)))
+                           (list (cspell--correction-candidate (concat "@" word))
+                                 (cspell--correction-candidate (concat "/" word))))))
+         (input (completing-read prompt
+                                 (cspell--correction-table choices)
+                                 nil nil nil nil
+                                 default)))
     (unless (string-empty-p input)
       input)))
+
+(defun cspell--handle-correction-choice (choice word ov)
+  "Apply correction CHOICE for WORD using overlay OV."
+  (cond
+   ((string-prefix-p "/" choice)
+    (cspell--project-add-word (substring choice 1)))
+   ((string-prefix-p "@" choice)
+    (cspell--user-add-word (substring choice 1)))
+   (t
+    (let ((beg (overlay-start ov))
+          (end (overlay-end ov)))
+      (delete-overlay ov)
+      (setq cspell--overlays (delq ov cspell--overlays))
+      (goto-char beg)
+      (delete-region beg end)
+      (insert choice)
+      (cspell--schedule)))))
 
 ;;;###autoload
 (defun cspell-correct ()
@@ -491,14 +708,7 @@ If BACKWARD is non-nil, search backward."
              (suggestions (overlay-get ov 'cspell-suggestions))
              (replacement (cspell--read-correction word suggestions)))
         (when replacement
-          (let ((beg (overlay-start ov))
-                (end (overlay-end ov)))
-            (delete-overlay ov)
-            (setq cspell--overlays (delq ov cspell--overlays))
-            (goto-char beg)
-            (delete-region beg end)
-            (insert replacement)
-            (cspell--schedule))))
+          (cspell--handle-correction-choice replacement word ov)))
     (message "No CSpell error at point")))
 
 ;;;###autoload
@@ -508,11 +718,7 @@ If BACKWARD is non-nil, search backward."
   (if-let* ((ov (cspell--overlay-at-point))
             (word (overlay-get ov 'cspell-word)))
       (progn
-        (cl-pushnew word cspell--ignored-words :test #'equal-ignore-case)
-        (dolist (candidate (copy-sequence cspell--overlays))
-          (when (equal-ignore-case word (overlay-get candidate 'cspell-word))
-            (delete-overlay candidate)
-            (setq cspell--overlays (delq candidate cspell--overlays))))
+        (cspell--ignore-word-in-buffer word)
         (message "CSpell ignored word in this buffer: %s" word))
     (message "No CSpell error at point")))
 
