@@ -231,6 +231,8 @@
     (unless (my/lisp-like-mode-p)
       (smartparens-mode 1)))
 
+  (sp-pair "'" nil :actions nil)
+
   (define-key smartparens-mode-map (kbd "C-M-f") #'sp-forward-sexp)
   (define-key smartparens-mode-map (kbd "C-M-b") #'sp-backward-sexp)
   (define-key smartparens-mode-map (kbd "C-M-u") #'sp-backward-up-sexp)

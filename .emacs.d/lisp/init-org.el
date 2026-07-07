@@ -69,6 +69,12 @@
   :config
   (setq org-startup-indented t)
   (setq org-return-follows-link t)
+  (setq org-src-fontify-natively t)
+
+  ;; src syntax highlight
+  (add-to-list 'org-src-lang-modes
+               '("fsharp" . fsharp-ts))
+
   ;; Latex formula
   (setq org-preview-latex-default-process 'dvisvgm)
   (setq org-format-latex-options

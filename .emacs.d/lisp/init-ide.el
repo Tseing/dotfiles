@@ -11,6 +11,7 @@
           (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
           (c "https://github.com/tree-sitter/tree-sitter-c" "v0.23.2")
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.2")
+          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" "v0.23.2")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
           (vue "https://github.com/ikatyang/tree-sitter-vue")
@@ -51,6 +52,18 @@
                '(c-mode . c-ts-mode))
   (add-to-list 'major-mode-remap-alist
                '(c++-mode . c++-ts-mode)))
+
+(use-package csharp-ts-mode
+  :straight nil
+  :mode
+  (("\\.cs\\'" . csharp-ts-mode)
+   ("\\.csproj\\'" . nxml-mode)
+   ("\\.sln\\'" . nxml-mode)
+   ("\\.slnx\\'" . nxml-mode))
+  :init
+  (setq csharp-ts-mode-indent-offset 4)
+  (add-to-list 'major-mode-remap-alist
+               '(csharp-mode . csharp-ts-mode)))
 
 (use-package fsharp-ts-mode
   :straight (:type git :host github :repo "bbatsov/fsharp-ts-mode")
@@ -226,6 +239,7 @@
    (rust-ts-mode . my/lsp-bridge-flycheck-setup)
    (c-ts-mode . my/lsp-bridge-flycheck-setup)
    (c++-ts-mode . my/lsp-bridge-flycheck-setup)
+   (csharp-ts-mode . my/lsp-bridge-flycheck-setup)
    (fsharp-ts-mode . my/lsp-bridge-flycheck-setup)
    (typescript-ts-mode . my/lsp-bridge-flycheck-setup)
    (tsx-ts-mode . my/lsp-bridge-flycheck-setup)
@@ -241,6 +255,7 @@
     :modes '(rust-ts-mode
              c-ts-mode
              c++-ts-mode
+             csharp-ts-mode
              fsharp-ts-mode
              typescript-ts-mode
              tsx-ts-mode
@@ -291,6 +306,7 @@
    (rust-ts-mode . lsp-bridge-mode)
    (c-ts-mode . lsp-bridge-mode)
    (c++-ts-mode . lsp-bridge-mode)
+   (csharp-ts-mode . lsp-bridge-mode)
    (fsharp-ts-mode . lsp-bridge-mode)
    (typescript-ts-mode . lsp-bridge-mode)
    (tsx-ts-mode . lsp-bridge-mode)
@@ -311,7 +327,8 @@
         ;; Default Python stack: basedpyright
         lsp-bridge-python-multi-lsp-server "basedpyright_ruff"
         lsp-bridge-python-lsp-server "basedpyright"
-        lsp-bridge-c-lsp-server "clangd")
+        lsp-bridge-c-lsp-server "clangd"
+        lsp-bridge-csharp-lsp-server "csharp-ls")
   :config
   (add-hook 'lsp-bridge-diagnostic-update-hook
             #'my/lsp-bridge-flycheck-refresh)
@@ -372,6 +389,11 @@
 
   (dolist (mode '(typescript-ts-mode tsx-ts-mode vue-ts-mode json-ts-mode yaml-ts-mode))
     (setf (alist-get mode apheleia-mode-alist) 'prettier))
+
+  (setf (alist-get 'csharpier apheleia-formatters)
+        '("dotnet" "csharpier" "format" inplace))
+  (setf (alist-get 'csharp-ts-mode apheleia-mode-alist)
+        'csharpier)
 
   (setf (alist-get 'fantomas apheleia-formatters)
         '("dotnet" "fantomas" inplace))
