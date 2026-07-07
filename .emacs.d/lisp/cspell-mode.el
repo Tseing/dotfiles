@@ -42,6 +42,11 @@ When nil, use `project-current' root if available, otherwise `default-directory'
   :type '(choice (const :tag "Auto" nil)
                  directory))
 
+(defcustom cspell-user-dictionary-file
+  (expand-file-name "cspell/user-dict.txt" user-emacs-directory)
+  "Path to the user dictionary file used by `@word'."
+  :type 'file)
+
 (defcustom cspell-include-modes nil
   "Major modes where `global-cspell-mode' should enable `cspell-mode'.
 Nil means enable in all buffers except excluded modes."
@@ -263,6 +268,126 @@ Nil means enable in all buffers except excluded modes."
           config)
       (append config (list (cons key value))))))
 
+(defun cspell--config-set-array-key (config key value)
+  "Set CONFIG array KEY to VALUE and return CONFIG."
+  (cspell--config-set-string-key config key value))
+
+(defun cspell--config-dictionary-definitions (config)
+  "Return dictionary definitions from CONFIG."
+  (copy-sequence
+   (or (cdr (assoc-string "dictionaryDefinitions" config t))
+       '())))
+
+(defun cspell--config-dictionaries (config)
+  "Return enabled dictionary names from CONFIG."
+  (copy-sequence
+   (or (cdr (assoc-string "dictionaries" config t))
+       '())))
+
+(defun cspell--dictionary-definition-name (definition)
+  "Return the name of dictionary DEFINITION."
+  (cdr (assoc-string "name" definition t)))
+
+(defun cspell--dictionary-definition-path (definition)
+  "Return the path of dictionary DEFINITION."
+  (cdr (assoc-string "path" definition t)))
+
+(defun cspell--dictionary-definition-path-equal-p (definition path config-dir)
+  "Return non-nil if DEFINITION resolves to PATH under CONFIG-DIR."
+  (when-let* ((definition-path (cspell--dictionary-definition-path definition)))
+    (string-equal (expand-file-name definition-path config-dir)
+                  (expand-file-name path))))
+
+(defun cspell--expand-user-dictionary-file ()
+  "Return the absolute user dictionary file path."
+  (expand-file-name cspell-user-dictionary-file user-emacs-directory))
+
+(defun cspell--user-dictionary-name (config path config-dir)
+  "Return the dictionary name to use for PATH in CONFIG-DIR."
+  (or (when-let* ((definition
+                   (cl-find-if
+                    (lambda (candidate)
+                      (cspell--dictionary-definition-path-equal-p
+                       candidate path config-dir))
+                    (cspell--config-dictionary-definitions config))))
+        (cspell--dictionary-definition-name definition))
+      (let ((base "cspell-mode-user")
+            (n 0)
+            candidate)
+        (while
+            (progn
+              (setq candidate (if (zerop n) base (format "%s-%d" base n)))
+              (setq n (1+ n))
+              (cl-find-if
+               (lambda (definition)
+                 (string-equal candidate
+                               (cspell--dictionary-definition-name definition)))
+               (cspell--config-dictionary-definitions config))))
+        candidate)))
+
+(defun cspell--ensure-user-dictionary-config ()
+  "Ensure the configured user dictionary is present in the project config.
+Return the resolved user dictionary file path."
+  (let* ((config-file (cspell--project-words-file))
+         (config-dir (file-name-directory config-file))
+         (user-file (cspell--expand-user-dictionary-file))
+         (config (cspell--read-project-config))
+         (definitions (cspell--config-dictionary-definitions config))
+         (dictionaries (cspell--config-dictionaries config))
+         (name (cspell--user-dictionary-name config user-file config-dir))
+         (relative-path (file-relative-name user-file config-dir))
+         (definition
+          (cl-find-if
+           (lambda (candidate)
+             (cspell--dictionary-definition-path-equal-p
+              candidate user-file config-dir))
+           definitions))
+         (enabled
+          (member name dictionaries))
+         (needs-config-update
+          (not (and definition enabled))))
+    (unless definition
+      (setq definitions
+            (append definitions
+                    (list `(("name" . ,name)
+                            ("path" . ,relative-path)))))
+      (setq config
+            (cspell--config-set-array-key
+             config "dictionaryDefinitions" definitions)))
+    (unless enabled
+      (setq config
+            (cspell--config-set-array-key
+             config "dictionaries"
+             (append dictionaries (list name)))))
+    (when needs-config-update
+      (unless (and (not noninteractive)
+                   (y-or-n-p
+                    (format "Update %s to enable user dictionary %s? "
+                            (abbreviate-file-name config-file)
+                            (abbreviate-file-name user-file))))
+        (user-error "User dictionary is not enabled in %s"
+                    (file-name-nondirectory config-file)))
+      (cspell--write-project-config config))
+    user-file))
+
+(defun cspell--file-contains-word-p (file word)
+  "Return non-nil if FILE already contains WORD on a line by itself."
+  (when (file-exists-p file)
+    (with-temp-buffer
+      (insert-file-contents file)
+      (save-excursion
+        (goto-char (point-min))
+        (catch 'found
+          (while (not (eobp))
+            (when (cspell--string-equal-ignore-case
+                   word
+                   (string-trim (buffer-substring-no-properties
+                                 (line-beginning-position)
+                                 (line-end-position))))
+              (throw 'found t))
+            (forward-line 1))
+          nil)))))
+
 (defun cspell--read-project-config ()
   "Return the current project CSpell config as an alist."
   (let ((file (cspell--project-words-file)))
@@ -298,7 +423,20 @@ Nil means enable in all buffers except excluded modes."
 
 (defun cspell--user-add-word (word)
   "Add WORD to the user CSpell dictionary."
-  (user-error "User dictionary is not implemented yet for %s" word))
+  (let ((file (cspell--ensure-user-dictionary-config)))
+    (make-directory (file-name-directory file) t)
+    (unless (cspell--file-contains-word-p file word)
+      (let ((default-directory (file-name-directory file)))
+        (with-temp-buffer
+          (when (file-exists-p file)
+            (insert-file-contents file)
+            (goto-char (point-max))
+            (unless (bolp)
+              (insert "\n")))
+          (insert word "\n")
+          (write-region nil nil file nil 'silent))))
+    (cspell--ignore-word-in-buffer word)
+    (message "CSpell added user word: %s" word)))
 
 (defun cspell--utf16-offset-to-point (offset)
   "Return the buffer position for UTF-16 OFFSET."
