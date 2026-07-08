@@ -93,3 +93,5 @@ ctrl
 latin
 len
 timedelta
+tauri
+vite
