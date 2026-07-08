@@ -184,25 +184,40 @@
         company-begin-commands '(self-insert-command))
   (push '(company-semantic :with company-yasnippet) company-backends))
 
-;; (use-package jinx
-;;   :defer 2
-;;   :hook (emacs-startup . global-jinx-mode)
-;;   :config
-;;   (setf (alist-get 'prog-mode jinx-include-faces)
-;;         '(font-lock-comment-face
-;;           font-lock-doc-face
-;;           font-lock-string-face
-;;           font-lock-function-name-face
-;;           font-lock-variable-name-face
-;;           font-lock-type-face))
-;;   ;; exclude Chinese
-;;   (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
 
-;;   (with-eval-after-load 'evil
-;;     (define-key evil-normal-state-map (kbd "]s") #'jinx-next)
-;;     (define-key evil-normal-state-map (kbd "[s") #'jinx-previous)
-;;     (define-key evil-normal-state-map (kbd "z=") #'jinx-correct)
-;;     ))
+(use-package jinx
+  :hook ((text-mode markdown-mode org-mode) . jinx-mode)
+  :config
+  ;; exclude Chinese
+  (add-to-list 'jinx-exclude-regexps '(t "\\cc"))
+
+  (set-face-attribute 'jinx-misspelled nil
+                      :underline '(:style wave :color "YellowGreen"))
+
+  (add-hook 'yaml-ts-mode-hook
+            (lambda ()
+              (jinx-mode -1)))
+
+  (with-eval-after-load 'evil
+    (add-hook 'jinx-mode-hook
+              (lambda ()
+                (evil-local-set-key 'normal (kbd "]s") #'jinx-next)
+                (evil-local-set-key 'normal (kbd "[s") #'jinx-previous)
+                (evil-local-set-key 'normal (kbd "z=") #'jinx-correct)))))
+
+(use-package cspell-mode
+  :straight nil
+  :commands (cspell-mode global-cspell-mode cspell-correct)
+  :hook ((prog-mode conf-mode yaml-ts-mode) . cspell-mode)
+  :config
+  (with-eval-after-load 'evil
+    (add-hook 'cspell-mode-hook
+              (lambda ()
+                (evil-local-set-key 'normal (kbd "]s") #'cspell-next)
+                (evil-local-set-key 'normal (kbd "[s") #'cspell-previous)
+                (evil-local-set-key 'normal (kbd "z=") #'cspell-correct)))))
+
+
 (defconst my/lisp-like-modes
   '(emacs-lisp-mode lisp-mode lisp-interaction-mode
                     scheme-mode clojure-mode racket-mode
@@ -281,19 +296,6 @@
   :config (which-key-mode))
 
 (use-package restart-emacs)
-
-(use-package cspell-mode
-  :straight nil
-  :commands (cspell-mode global-cspell-mode cspell-correct)
-  :hook ((text-mode prog-mode conf-mode) . cspell-mode)
-  :config
-  (with-eval-after-load 'evil
-    (add-hook 'cspell-mode-hook
-      (lambda ()
-        (evil-local-set-key 'normal (kbd "]s") #'cspell-next)
-        (evil-local-set-key 'normal (kbd "[s") #'cspell-previous)
-        (evil-local-set-key 'normal (kbd "z=") #'cspell-correct)))))
-
 
 (provide 'init-packages)
 
