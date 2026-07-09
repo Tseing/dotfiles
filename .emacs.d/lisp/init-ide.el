@@ -11,7 +11,7 @@
           (rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.23.2")
           (c "https://github.com/tree-sitter/tree-sitter-c" "v0.23.2")
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp" "v0.23.2")
-          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" "v0.23.2")
+          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp" "v0.23.1")
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "typescript/src")
           (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "v0.23.2" "tsx/src")
           (vue "https://github.com/ikatyang/tree-sitter-vue")
