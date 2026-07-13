@@ -143,7 +143,8 @@ Nil means enable in all buffers except excluded modes."
                (or (and buffer-file-name
                         (file-name-extension buffer-file-name))
                    "txt"))
-       (cspell--project-root))))
+       (cspell--project-root)))
+)
 
 (defun cspell--helper-script ()
   "Return the helper script path."
@@ -160,6 +161,11 @@ Nil means enable in all buffers except excluded modes."
       (user-error "Only JSON CSpell config files are supported for project words: %s"
                   file))
     file))
+
+(defun cspell--resolved-config-file ()
+  "Return the resolved config file path for helper requests."
+  (when cspell-config
+    (expand-file-name cspell-config (cspell--project-root))))
 
 (defun cspell--cspell-command ()
   "Return the resolved CSpell executable path."
@@ -225,8 +231,7 @@ Nil means enable in all buffers except excluded modes."
              (baseOffset . ,base-offset)
              (languageId . ,(symbol-name major-mode))
              (locale . nil)
-             (configFile . ,(when cspell-config
-                              (expand-file-name cspell-config)))
+             (configFile . ,(cspell--resolved-config-file))
              (root . ,(cspell--project-root)))))))
 
 (defun cspell--delete-overlays (&optional beg end)
@@ -640,6 +645,12 @@ If TRANSFORM is non-nil, return a display title."
   (clrhash cspell--pending-requests)
   (setq cspell--session-process nil
         cspell--session-output "")
+  (dolist (buffer (buffer-list))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (when (bound-and-true-p cspell-mode)
+          (setq cspell--request-id nil
+                cspell--request-region nil)))))
   (when (buffer-live-p cspell--session-stdout-buffer)
     (kill-buffer cspell--session-stdout-buffer))
   (when (buffer-live-p cspell--session-stderr-buffer)
