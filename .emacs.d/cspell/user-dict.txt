@@ -1,0 +1,11 @@
+deque
+maxlen
+appendleft
+popleft
+pathlib
+viewmodels
+dtos
+elif
+dataclasses
+dataclass
+pylint

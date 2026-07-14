@@ -17,4 +17,6 @@
 !multiserver/
 !multiserver/**
 
+!cspell/
+!cspell/user-dict.txt
 !cspell-mode-helper.mjs
