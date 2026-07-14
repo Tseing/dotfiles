@@ -60,6 +60,17 @@ async function getCspellApi(cspellCommand) {
   return moduleCache.get(moduleUrl);
 }
 
+async function clearHelperCaches() {
+  for (const modulePromise of moduleCache.values()) {
+    const api = await modulePromise;
+    if (typeof api.clearCachedFiles === "function") {
+      await api.clearCachedFiles();
+    } else if (typeof api.clearCaches === "function") {
+      api.clearCaches();
+    }
+  }
+}
+
 async function handleRequest(request) {
   const {
     requestId = null,
@@ -225,6 +236,18 @@ async function runServer() {
       if (activeRequestId === requestId) {
         canceled.add(requestId);
       }
+      return;
+    }
+
+    if (message.type === "clear-cache") {
+      void clearHelperCaches().catch((error) => {
+        writeResponse({
+          requestId: null,
+          issues: [],
+          checked: false,
+          errors: [error.message || String(error)],
+        });
+      });
       return;
     }
 

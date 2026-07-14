@@ -423,6 +423,7 @@ Return the resolved user dictionary file path."
             (cspell--config-set-string-key
              config "words" (append words (list word))))
       (cspell--write-project-config config))
+    (cspell--clear-helper-cache)
     (cspell--ignore-word-in-buffer word)
     (message "CSpell added project word: %s" word)))
 
@@ -440,6 +441,7 @@ Return the resolved user dictionary file path."
               (insert "\n")))
           (insert word "\n")
           (write-region nil nil file nil 'silent))))
+    (cspell--clear-helper-cache)
     (cspell--ignore-word-in-buffer word)
     (message "CSpell added user word: %s" word)))
 
@@ -584,6 +586,14 @@ If TRANSFORM is non-nil, return a display title."
      cspell--session-process
      (concat (json-encode `((type . "cancel")
                             (requestId . ,request-id)))
+             "\n"))))
+
+(defun cspell--clear-helper-cache ()
+  "Ask the persistent helper to clear its CSpell caches."
+  (when (process-live-p cspell--session-process)
+    (process-send-string
+     cspell--session-process
+     (concat (json-encode '((type . "clear-cache")))
              "\n"))))
 
 (defun cspell--stderr-string ()
