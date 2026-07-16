@@ -78,6 +78,7 @@ async function handleRequest(request) {
     uri,
     text,
     baseOffset = 0,
+    userDictionaryFile,
     languageId,
     locale,
     configFile,
@@ -97,6 +98,20 @@ async function handleRequest(request) {
 
   const { fileToDocument, spellCheckDocumentRPC } = await getCspellApi(cspellCommand);
   const document = fileToDocument(uri, text, languageId, locale);
+  const settings = {
+    loadDefaultConfiguration: true,
+  };
+
+  if (typeof userDictionaryFile === "string" && existsSync(userDictionaryFile)) {
+    settings.dictionaryDefinitions = [
+      {
+        name: "cspell-mode-user",
+        path: userDictionaryFile,
+      },
+    ];
+    settings.dictionaries = ["cspell-mode-user"];
+  }
+
   const result = await spellCheckDocumentRPC(
     document,
     {
@@ -104,9 +119,7 @@ async function handleRequest(request) {
       generateSuggestions: true,
       noConfigSearch: false,
     },
-    {
-      loadDefaultConfiguration: true,
-    },
+    settings,
   );
 
   return {

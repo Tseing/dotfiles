@@ -229,6 +229,7 @@ Nil means enable in all buffers except excluded modes."
              (uri . ,(cspell--buffer-file-name))
              (text . ,(buffer-substring-no-properties beg end))
              (baseOffset . ,base-offset)
+             (userDictionaryFile . ,(cspell--expand-user-dictionary-file))
              (languageId . ,(symbol-name major-mode))
              (locale . nil)
              (configFile . ,(cspell--resolved-config-file))
@@ -416,9 +417,17 @@ Return the resolved user dictionary file path."
 
 (defun cspell--project-add-word (word)
   "Add WORD to the project CSpell dictionary."
-  (let* ((config (cspell--read-project-config))
+  (let* ((file (cspell--project-words-file))
+         (config (cspell--read-project-config))
          (words (copy-sequence (or (cdr (assoc-string "words" config t)) '()))))
     (unless (member-ignore-case word words)
+      (when (and (not (file-exists-p file))
+                 (not noninteractive))
+        (unless (y-or-n-p
+                 (format "Create %s and add project word %s? "
+                         (abbreviate-file-name file)
+                         word))
+          (user-error "Canceled creating %s" (file-name-nondirectory file))))
       (setq config
             (cspell--config-set-string-key
              config "words" (append words (list word))))
@@ -429,7 +438,7 @@ Return the resolved user dictionary file path."
 
 (defun cspell--user-add-word (word)
   "Add WORD to the user CSpell dictionary."
-  (let ((file (cspell--ensure-user-dictionary-config)))
+  (let ((file (cspell--expand-user-dictionary-file)))
     (make-directory (file-name-directory file) t)
     (unless (cspell--file-contains-word-p file word)
       (let ((default-directory (file-name-directory file)))
