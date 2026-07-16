@@ -740,6 +740,15 @@ If TRANSFORM is non-nil, return a display title."
      (line-end-position)))
   (cspell--schedule))
 
+(defun cspell--after-revert ()
+  "Refresh CSpell state after reverting the current buffer."
+  (setq cspell--request-id nil
+        cspell--request-region nil
+        cspell--ignored-words nil)
+  (cspell--delete-overlays)
+  (cspell--clear-helper-cache)
+  (cspell--schedule))
+
 (defun cspell-debug-buffer ()
   "Run the CSpell helper on current buffer and show raw output."
   (interactive)
@@ -900,10 +909,12 @@ If BACKWARD is non-nil, search backward."
         (unless (executable-find cspell-node-executable)
           (message "Cannot find Node executable: %s" cspell-node-executable))
         (add-hook 'after-change-functions #'cspell--after-change nil t)
+        (add-hook 'after-revert-hook #'cspell--after-revert nil t)
         (add-hook 'post-command-hook #'cspell--post-command nil t)
         (add-hook 'eldoc-documentation-functions #'cspell-eldoc-function nil t)
         (cspell--schedule))
     (remove-hook 'after-change-functions #'cspell--after-change t)
+    (remove-hook 'after-revert-hook #'cspell--after-revert t)
     (remove-hook 'post-command-hook #'cspell--post-command t)
     (remove-hook 'eldoc-documentation-functions #'cspell-eldoc-function t)
     (when cspell--timer
