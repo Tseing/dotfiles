@@ -49,6 +49,7 @@ function normalizeIssue(issue) {
 }
 
 const moduleCache = new Map();
+const userDictionaryExistsCache = new Map();
 
 async function getCspellApi(cspellCommand) {
   const moduleUrl = resolveCspellLibModule(cspellCommand);
@@ -69,6 +70,14 @@ async function clearHelperCaches() {
       api.clearCaches();
     }
   }
+  userDictionaryExistsCache.clear();
+}
+
+function userDictionaryExists(userDictionaryFile) {
+  if (!userDictionaryExistsCache.has(userDictionaryFile)) {
+    userDictionaryExistsCache.set(userDictionaryFile, existsSync(userDictionaryFile));
+  }
+  return userDictionaryExistsCache.get(userDictionaryFile);
 }
 
 async function handleRequest(request) {
@@ -102,7 +111,7 @@ async function handleRequest(request) {
     loadDefaultConfiguration: true,
   };
 
-  if (typeof userDictionaryFile === "string" && existsSync(userDictionaryFile)) {
+  if (typeof userDictionaryFile === "string" && userDictionaryExists(userDictionaryFile)) {
     settings.dictionaryDefinitions = [
       {
         name: "cspell-mode-user",
@@ -190,7 +199,24 @@ async function runServer() {
     }
 
     const request = queue.shift();
-    activeRequestId = request.requestId;
+    activeRequestId = request.requestId ?? "__control__";
+
+    if (request.type === "clear-cache") {
+      try {
+        await clearHelperCaches();
+      } catch (error) {
+        writeResponse({
+          requestId: null,
+          issues: [],
+          checked: false,
+          errors: [error.message || String(error)],
+        });
+      } finally {
+        activeRequestId = null;
+        void pumpQueue();
+      }
+      return;
+    }
 
     try {
       const response = await handleRequest(request);
@@ -253,14 +279,8 @@ async function runServer() {
     }
 
     if (message.type === "clear-cache") {
-      void clearHelperCaches().catch((error) => {
-        writeResponse({
-          requestId: null,
-          issues: [],
-          checked: false,
-          errors: [error.message || String(error)],
-        });
-      });
+      queue.push(message);
+      void pumpQueue();
       return;
     }
 

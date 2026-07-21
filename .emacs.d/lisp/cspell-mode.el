@@ -274,107 +274,9 @@ Nil means enable in all buffers except excluded modes."
           config)
       (append config (list (cons key value))))))
 
-(defun cspell--config-set-array-key (config key value)
-  "Set CONFIG array KEY to VALUE and return CONFIG."
-  (cspell--config-set-string-key config key value))
-
-(defun cspell--config-dictionary-definitions (config)
-  "Return dictionary definitions from CONFIG."
-  (copy-sequence
-   (or (cdr (assoc-string "dictionaryDefinitions" config t))
-       '())))
-
-(defun cspell--config-dictionaries (config)
-  "Return enabled dictionary names from CONFIG."
-  (copy-sequence
-   (or (cdr (assoc-string "dictionaries" config t))
-       '())))
-
-(defun cspell--dictionary-definition-name (definition)
-  "Return the name of dictionary DEFINITION."
-  (cdr (assoc-string "name" definition t)))
-
-(defun cspell--dictionary-definition-path (definition)
-  "Return the path of dictionary DEFINITION."
-  (cdr (assoc-string "path" definition t)))
-
-(defun cspell--dictionary-definition-path-equal-p (definition path config-dir)
-  "Return non-nil if DEFINITION resolves to PATH under CONFIG-DIR."
-  (when-let* ((definition-path (cspell--dictionary-definition-path definition)))
-    (string-equal (expand-file-name definition-path config-dir)
-                  (expand-file-name path))))
-
 (defun cspell--expand-user-dictionary-file ()
   "Return the absolute user dictionary file path."
   (expand-file-name cspell-user-dictionary-file user-emacs-directory))
-
-(defun cspell--user-dictionary-name (config path config-dir)
-  "Return the dictionary name to use for PATH in CONFIG-DIR."
-  (or (when-let* ((definition
-                   (cl-find-if
-                    (lambda (candidate)
-                      (cspell--dictionary-definition-path-equal-p
-                       candidate path config-dir))
-                    (cspell--config-dictionary-definitions config))))
-        (cspell--dictionary-definition-name definition))
-      (let ((base "cspell-mode-user")
-            (n 0)
-            candidate)
-        (while
-            (progn
-              (setq candidate (if (zerop n) base (format "%s-%d" base n)))
-              (setq n (1+ n))
-              (cl-find-if
-               (lambda (definition)
-                 (string-equal candidate
-                               (cspell--dictionary-definition-name definition)))
-               (cspell--config-dictionary-definitions config))))
-        candidate)))
-
-(defun cspell--ensure-user-dictionary-config ()
-  "Ensure the configured user dictionary is present in the project config.
-Return the resolved user dictionary file path."
-  (let* ((config-file (cspell--project-words-file))
-         (config-dir (file-name-directory config-file))
-         (user-file (cspell--expand-user-dictionary-file))
-         (config (cspell--read-project-config))
-         (definitions (cspell--config-dictionary-definitions config))
-         (dictionaries (cspell--config-dictionaries config))
-         (name (cspell--user-dictionary-name config user-file config-dir))
-         (relative-path (file-relative-name user-file config-dir))
-         (definition
-          (cl-find-if
-           (lambda (candidate)
-             (cspell--dictionary-definition-path-equal-p
-              candidate user-file config-dir))
-           definitions))
-         (enabled
-          (member name dictionaries))
-         (needs-config-update
-          (not (and definition enabled))))
-    (unless definition
-      (setq definitions
-            (append definitions
-                    (list `(("name" . ,name)
-                            ("path" . ,relative-path)))))
-      (setq config
-            (cspell--config-set-array-key
-             config "dictionaryDefinitions" definitions)))
-    (unless enabled
-      (setq config
-            (cspell--config-set-array-key
-             config "dictionaries"
-             (append dictionaries (list name)))))
-    (when needs-config-update
-      (unless (and (not noninteractive)
-                   (y-or-n-p
-                    (format "Update %s to enable user dictionary %s? "
-                            (abbreviate-file-name config-file)
-                            (abbreviate-file-name user-file))))
-        (user-error "User dictionary is not enabled in %s"
-                    (file-name-nondirectory config-file)))
-      (cspell--write-project-config config))
-    user-file))
 
 (defun cspell--file-contains-word-p (file word)
   "Return non-nil if FILE already contains WORD on a line by itself."
@@ -393,6 +295,20 @@ Return the resolved user dictionary file path."
               (throw 'found t))
             (forward-line 1))
           nil)))))
+
+(defun cspell--ensure-user-dictionary-file (file word)
+  "Ensure user dictionary FILE exists before adding WORD."
+  (unless (file-exists-p file)
+    (unless (and (not noninteractive)
+                 (y-or-n-p
+                  (format "Create user dictionary %s and add word %s? "
+                          (abbreviate-file-name file)
+                          word)))
+      (user-error "Canceled creating user dictionary %s"
+                  (file-name-nondirectory file)))
+    (make-directory (file-name-directory file) t)
+    (with-temp-buffer
+      (write-region nil nil file nil 'silent))))
 
 (defun cspell--read-project-config ()
   "Return the current project CSpell config as an alist."
@@ -419,7 +335,8 @@ Return the resolved user dictionary file path."
   "Add WORD to the project CSpell dictionary."
   (let* ((file (cspell--project-words-file))
          (config (cspell--read-project-config))
-         (words (copy-sequence (or (cdr (assoc-string "words" config t)) '()))))
+         (words (copy-sequence (or (cdr (assoc-string "words" config t)) '())))
+         (written nil))
     (unless (member-ignore-case word words)
       (when (and (not (file-exists-p file))
                  (not noninteractive))
@@ -431,16 +348,21 @@ Return the resolved user dictionary file path."
       (setq config
             (cspell--config-set-string-key
              config "words" (append words (list word))))
-      (cspell--write-project-config config))
-    (cspell--clear-helper-cache)
+      (cspell--write-project-config config)
+      (setq written t))
+    (when written
+      (cspell--invalidate-current-request)
+      (cspell--clear-helper-cache)
+      (cspell--schedule))
     (cspell--ignore-word-in-buffer word)
     (message "CSpell added project word: %s" word)))
 
 (defun cspell--user-add-word (word)
   "Add WORD to the user CSpell dictionary."
   (let ((file (cspell--expand-user-dictionary-file)))
-    (make-directory (file-name-directory file) t)
-    (unless (cspell--file-contains-word-p file word)
+    (cspell--ensure-user-dictionary-file file word)
+    (let ((written nil))
+      (unless (cspell--file-contains-word-p file word)
       (let ((default-directory (file-name-directory file)))
         (with-temp-buffer
           (when (file-exists-p file)
@@ -449,8 +371,12 @@ Return the resolved user dictionary file path."
             (unless (bolp)
               (insert "\n")))
           (insert word "\n")
-          (write-region nil nil file nil 'silent))))
-    (cspell--clear-helper-cache)
+            (write-region nil nil file nil 'silent)))
+        (setq written t))
+      (when written
+        (cspell--invalidate-current-request)
+        (cspell--clear-helper-cache)
+        (cspell--schedule)))
     (cspell--ignore-word-in-buffer word)
     (message "CSpell added user word: %s" word)))
 
@@ -605,6 +531,15 @@ If TRANSFORM is non-nil, return a display title."
      (concat (json-encode '((type . "clear-cache")))
              "\n"))))
 
+(defun cspell--invalidate-current-request ()
+  "Invalidate the current in-flight request for this buffer."
+  (when cspell--request-id
+    (cspell--send-cancel cspell--request-id)
+    (remhash cspell--request-id cspell--pending-requests))
+  (cl-incf cspell--check-id)
+  (setq cspell--request-id nil
+        cspell--request-region nil))
+
 (defun cspell--stderr-string ()
   "Return helper stderr output."
   (when (buffer-live-p cspell--session-stderr-buffer)
@@ -669,7 +604,8 @@ If TRANSFORM is non-nil, return a display title."
       (with-current-buffer buffer
         (when (bound-and-true-p cspell-mode)
           (setq cspell--request-id nil
-                cspell--request-region nil)))))
+                cspell--request-region nil)
+          (cspell--delete-overlays)))))
   (when (buffer-live-p cspell--session-stdout-buffer)
     (kill-buffer cspell--session-stdout-buffer))
   (when (buffer-live-p cspell--session-stderr-buffer)
