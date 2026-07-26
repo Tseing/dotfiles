@@ -9,3 +9,4 @@ elif
 dataclasses
 dataclass
 pylint
+mapi
