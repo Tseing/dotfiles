@@ -19,6 +19,17 @@ This will create necessary symlinks to `$HOME` directory.
 ## Emacs (.emacs.d)
 
 
+### Fonts
+
+These fonts are referenced directly by the config and need to be installed manually:
+
+- `Maple Mono`
+- `Sarasa Fixed CL`
+- `CaskaydiaMono Nerd Font Propo`
+
+
+### LSP
+
 This configuration uses [lsp-bridge](https://github.com/manateelazycat/lsp-bridge) for fast LSP support.
 
 Requirements:
