@@ -23,6 +23,7 @@ link_path() {
 mkdir -p \
   "$HOME/.config" \
   "$HOME/.config/enchant" \
+  "$HOME/.config/fontconfig" \
   "$HOME/.config/zathura" \
   "$HOME/.config/fcitx5/conf" \
   "$HOME/.local/share/fcitx5/themes"
@@ -30,6 +31,7 @@ mkdir -p \
 link_path "$DOTFILES/.emacs.d" "$HOME/.emacs.d"
 link_path "$DOTFILES/.config/starship.toml" "$HOME/.config/starship.toml"
 link_path "$DOTFILES/.config/enchant/personal.dic" "$HOME/.config/enchant/en_US.dic"
+link_path "$DOTFILES/.config/fontconfig/conf.d" "$HOME/.config/fontconfig/conf.d"
 link_path "$DOTFILES/.config/zathura/zathurarc" "$HOME/.config/zathura/zathurarc"
 link_path "$DOTFILES/.config/fcitx5/config" "$HOME/.config/fcitx5/config"
 link_path "$DOTFILES/.config/fcitx5/profile" "$HOME/.config/fcitx5/profile"

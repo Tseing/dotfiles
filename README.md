@@ -24,11 +24,17 @@ These fonts are referenced directly by the config and need to be installed manua
 - `Sarasa Fixed CL`
 - `CaskaydiaMono Nerd Font Propo`
 - `TumanPUA`
+- `Noto Sans`
+- `Noto Sans CJK SC`
+- `Source Han Serif K Heavy`
+- `Source Han Serif SC Heavy`
+- `TH-Tshyn-P0`
+- `TH-Tshyn-P1`
+- `TH-Tshyn-P2`
+- `TH-Tshyn-P16`
+- `FiraCode Nerd Font`
 
 ## Emacs (.emacs.d)
-
-`install.sh` links `.local/share/fcitx5/rime` and `.local/share/fcitx5/themes/leonis-light` as directories. Runtime files under `rime/` are filtered by the directory-local `.gitignore`.
-
 
 ### LSP
 
